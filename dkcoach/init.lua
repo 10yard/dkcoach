@@ -10,60 +10,55 @@ exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
 function spring_coach()
-	if mem:read_i8(0xc6227) == 3 then       -- Springs stage
-		if mem:read_i8(0xc600a) == 0xc then -- During gameplay
-			
-			-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay inside the box to be safe.
-			draw_box("safe", 185, 148, 168, 168)
-			draw_box("safe", 185, 100, 168, 118)
-			
-			-- Determine the spring type (0-15) of generated springs
-			for i, addr in ipairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
-				s_x = mem:read_u8(addr + 3)
-				s_y = mem:read_u8(addr + 5)
-				if s_y == 80 then             -- y start position of new springs is always 80
-					if s_x >= 248 then        -- x start position is between 248 and 7
-						s_type = s_x - 248
-					elseif s_x <= 7 then
-						s_type = s_x + 8
-					end
-				end
-				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0xc6229) < 4 then
-					-- Remember type of the trailing string.
-					s_type_trailing = s_type
+	if mem:read_i8(0xc600a) == 0xc then -- During gameplay
+		-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
+		draw_box("spring-safe", 185, 148, 168, 168)
+		draw_box("spring-safe", 185, 100, 168, 118)
+		
+		-- Determine the spring type (0-15) of generated springs
+		for i, addr in ipairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
+			s_x = mem:read_u8(addr + 3)
+			s_y = mem:read_u8(addr + 5)
+			if s_y == 80 then             -- y start position of new springs is always 80
+				if s_x >= 248 then        -- x start position is between 248 and 7
+					s_type = s_x - 248
+				elseif s_x <= 7 then
+					s_type = s_x + 8
 				end
 			end
-			
-			if s_type ~= nil then
-				-- Update screen with spring info
-				write_message(0xc77a5, "T="..string.format("%02d", s_type))
-				write_message(0xc77a6, "       ")
-				if s_type >= 13 then
-					write_message(0xc77a6, "(LONG)")
-				elseif s_type <= 6 then
-					write_message(0xc77a6, "(SHORT)")
-				end
-				
-				--1st and 2nd bounce boxes using latest spring type info.
-				draw_box("bounce", 183, 20 + s_type, 168, 33 + s_type)
-				draw_box("bounce", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
-				--3rd bounce box 
-				--At level 4,  the springs move faster so the trailing spring will be the hazard to avoid.
-				draw_box("bounce", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)	
+			if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0xc6229) < 4 then
+				-- Remember type of the trailing string.
+				s_type_trailing = s_type
 			end
-		else
-			-- Clear screen info
-			write_message(0xc77a5, "    ")		
-			write_message(0xc77a6, "       ")
 		end
+		
+		if s_type ~= nil then
+			-- Update screen with spring info
+			write_message(0xc77a5, "T="..string.format("%02d", s_type))
+			write_message(0xc77a6, "       ")
+			if s_type >= 13 then
+				write_message(0xc77a6, "(LONG)")
+			elseif s_type <= 6 then
+				write_message(0xc77a6, "(SHORT)")
+			end			
+			--1st and 2nd bounce boxes use the latest spring type.
+			draw_box("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
+			draw_box("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
+			--3rd bounce box uses the trailing spring type on levels 4 and above
+			draw_box("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)	
+		end
+	else
+		-- Clear screen info
+		write_message(0xc77a5, "    ")		
+		write_message(0xc77a6, "       ")
 	end
 end
-
 
 function initialize()
 		cpu = manager.machine.devices[":maincpu"]
 		mem = cpu.spaces["program"]
 		scr = manager.machine.screens[":screen"]
+		
 		dkchars = {}
 		dkchars["0"] = 0x00
 		dkchars["1"] = 0x01
@@ -107,6 +102,14 @@ function initialize()
 		dkchars[")"] = 0x3c
 end
 
+function main()
+	stage = mem:read_i8(0xc6227)
+	if stage == 3 then
+		spring_coach()
+	end
+
+end
+
 function dkcoach.startplugin()
 
 	function write_message(start_address, text)
@@ -118,11 +121,11 @@ function dkcoach.startplugin()
 	end	
 
 	function draw_box(type, y1, x1, y2, x2)
-		if type == "bounce" then
+		if type == "spring-hazard" then
 			scr:draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
 			scr:draw_line(y1, x1, y2, x2, 0xffff0000)
 			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
-		elseif type == "safe" then
+		elseif type == "spring-safe" then
 			scr:draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
 			scr:draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
 		end
@@ -132,7 +135,6 @@ function dkcoach.startplugin()
 		initialize()
 	end)
 
-	emu.register_frame_done(spring_coach, "frame")
-
+	emu.register_frame_done(main, "frame")
 end
 return exports
