@@ -1,4 +1,5 @@
 -- DK Coach by Jon Wilson (10yard)
+-- Requires MAME version 0.227 and above
 -- mame dkong -plugin dkcoach
 
 local exports = {}
@@ -9,55 +10,22 @@ exports.license = "The BSD 3-Clause License"
 exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
-function spring_coach()
-	if mem:read_i8(0xc600a) == 0xc then -- During gameplay
-		-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
-		draw_box("spring-safe", 185, 148, 168, 168)
-		draw_box("spring-safe", 185, 100, 168, 118)
-		
-		-- Determine the spring type (0-15) of generated springs
-		for i, addr in ipairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
-			s_x = mem:read_u8(addr + 3)
-			s_y = mem:read_u8(addr + 5)
-			if s_y == 80 then             -- y start position of new springs is always 80
-				if s_x >= 248 then        -- x start position is between 248 and 7
-					s_type = s_x - 248
-				elseif s_x <= 7 then
-					s_type = s_x + 8
-				end
-			end
-			if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0xc6229) < 4 then
-				-- Remember type of the trailing string.
-				s_type_trailing = s_type
-			end
-		end
-		
-		if s_type ~= nil then
-			-- Update screen with spring info
-			write_message(0xc77a5, "T="..string.format("%02d", s_type))
-			write_message(0xc77a6, "       ")
-			if s_type >= 13 then
-				write_message(0xc77a6, "(LONG)")
-			elseif s_type <= 6 then
-				write_message(0xc77a6, "(SHORT)")
-			end			
-			--1st and 2nd bounce boxes use the latest spring type.
-			draw_box("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
-			draw_box("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
-			--3rd bounce box uses the trailing spring type on levels 4 and above
-			draw_box("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)	
-		end
-	else
-		-- Clear screen info
-		write_message(0xc77a5, "    ")		
-		write_message(0xc77a6, "       ")
-	end
-end
+function dkcoach.startplugin()
+	function main()
+		-- overwrite the rom's highscore text
+		write_message(0xc76e0, "   DK COACH   ")
 
-function initialize()
+		-- stage specific action
+		stage = mem:read_i8(0xc6227)
+		if stage == 3 then
+			spring_coach()
+		end
+	end
+
+	function initialize()
 		cpu = manager.machine.devices[":maincpu"]
-		mem = cpu.spaces["program"]
 		scr = manager.machine.screens[":screen"]
+		mem = cpu.spaces["program"]
 		
 		dkchars = {}
 		dkchars["0"] = 0x00
@@ -100,17 +68,52 @@ function initialize()
 		dkchars["="] = 0x34
 		dkchars["("] = 0x3b
 		dkchars[")"] = 0x3c
-end
-
-function main()
-	stage = mem:read_i8(0xc6227)
-	if stage == 3 then
-		spring_coach()
 	end
 
-end
-
-function dkcoach.startplugin()
+	function spring_coach()
+		if mem:read_i8(0xc600a) == 0xc then -- During gameplay
+			-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
+			draw_box("spring-safe", 185, 148, 168, 168)
+			draw_box("spring-safe", 185, 100, 168, 118)
+			
+			-- Determine the spring type (0-15) of generated springs
+			for i, addr in ipairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
+				s_x = mem:read_u8(addr + 3)
+				s_y = mem:read_u8(addr + 5)
+				if s_y == 80 then             -- y start position of new springs is always 80
+					if s_x >= 248 then        -- x start position is between 248 and 7
+						s_type = s_x - 248
+					elseif s_x <= 7 then
+						s_type = s_x + 8
+					end
+				end
+				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0xc6229) < 4 then
+					-- Remember type of the trailing string.
+					s_type_trailing = s_type
+				end
+			end
+			
+			if s_type ~= nil then
+				-- Update screen with spring info
+				write_message(0xc77a5, "T="..string.format("%02d", s_type))
+				write_message(0xc77a6, "       ")
+				if s_type >= 13 then
+					write_message(0xc77a6, "(LONG)")
+				elseif s_type <= 6 then
+					write_message(0xc77a6, "(SHORT)")
+				end			
+				--1st and 2nd bounce boxes use the latest spring type.
+				draw_box("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
+				draw_box("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
+				--3rd bounce box uses the trailing spring type on levels 4 and above
+				draw_box("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)	
+			end
+		else
+			-- Clear screen info
+			write_message(0xc77a5, "    ")		
+			write_message(0xc77a6, "       ")
+		end
+	end
 
 	function write_message(start_address, text)
 		-- write characters of message to DK's video ram
