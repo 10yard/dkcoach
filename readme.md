@@ -11,12 +11,16 @@ At the moment,  the plugin only helps you with the elevator/springs stage.
  - Fixed safe zones appear in transparent green on DK's girder
  - Variable danger zones appear in red on DK's girder.  Danger zones update progressively more quickly as you progress from level 1 to level 4.  Level 4 to level 22 are the same.
 
+
+![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot.png)
+
+
 Process for progressing on the springs stage.
  - Get yourself to the first green safe spot on DK's girder.
  - Move to the left of the 1st safe spot, ensuring that Jumpman's feet remain inside the box.
  - Wait for a short spring.  When you see it, move "slightly" to the left so you are closer to the 2nd safe spot,  ensuring the springdoes not hit you.  When it goes over,  you should run quickly to the 2nd safe spot.
  - Breathe.  That's the first bit done.
- - Move to the right og the 2nd safe spot, ensuring that Jumpman's feet remain inside the box.
+ - Move to the right of the 2nd safe spot, ensuring that Jumpman's feet remain inside the box.
  - Wait for a long spring.  When you see it,  make a run for the ladder,  keeping your eye on the next generated spring, it must be short if you are to make it up the ladder.  If it is not short then you must retreat to the safe spot quickly. 
  - Well done if you made it up the ladder
  
