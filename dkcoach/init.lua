@@ -1,7 +1,9 @@
 -- DK Coach by Jon Wilson (10yard)
+--
 -- Tested with latest MAME versions 0.234 and 0.196
 -- Compatible with MAME versions from 0.196
--- Use P2 to toggle the helpfulness setting between 2 (Max), 1 (Min) and 0 (None)
+-- Use P2 to toggle the helpfulness setting between 3 (Max), 2 (Min) and 1 (None)
+--
 -- mame dkong -plugin dkcoach
 
 local exports = {}
@@ -55,12 +57,12 @@ function dkcoach.startplugin()
 	char_table["="] = 0x34
 	char_table["'"] = 0x3d
 	help_setting_name = {}
-	help_setting_name[0] = " NO"
-	help_setting_name[1] = "MIN"
-	help_setting_name[2] = "MAX"
+	help_setting_name[1] = " NO"
+	help_setting_name[2] = "MIN"
+	help_setting_name[3] = "MAX"
 
 	function initialize()
-		help_setting = 2
+		help_setting = 3
 		last_help_toggle = os.clock()
 		version = tonumber(emu.app_version())
 		if version >= 0.227 then
@@ -80,16 +82,17 @@ function dkcoach.startplugin()
 
 	function main()
 		if version >= 0.196 then
-			-- overwrite the rom's highscore text
+			-- overwrite the rom's highscore text with title and display the active help setting.
 			write_message(0xc76e0, "    DK COACH   ".."TOGGLE")
 			write_message(0xc7521, help_setting_name[help_setting].." HELP")
 
-			-- check for P2 button press
+			-- check for P2 button press.
 			if string.sub(int_to_bin(mem:read_i8(0xc7d00)), 5, 5) == "1" then
 				if os.clock() - last_help_toggle > 0.25 then
+					-- toggle the active help setting
 					help_setting = help_setting - 1
-					if help_setting < 0 then
-						help_setting = 2
+					if help_setting < 1 then
+						help_setting = 3
 					end
 					last_help_toggle = os.clock()
 				end
@@ -104,8 +107,8 @@ function dkcoach.startplugin()
 	end
 
 	function spring_coach()
-		if mem:read_i8(0xc600a) == 0xc and help_setting > 0 then  -- During gameplay
-			if help_setting == 2 then
+		if mem:read_i8(0xc600a) == 0xc and help_setting > 1 then  -- During gameplay
+			if help_setting == 3 then
 				-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
 				draw_zone("spring-safe", 185, 148, 168, 168)
 				draw_zone("spring-safe", 185, 100, 168, 118)
@@ -137,7 +140,7 @@ function dkcoach.startplugin()
 				elseif s_type <= 6 then
 					write_message(0xc77a6, "'SHORT'")
 				end
-				if help_setting == 2 then
+				if help_setting == 3 then
 					--1st and 2nd bounce boxes use the latest spring type.
 					draw_zone("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
 					draw_zone("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)

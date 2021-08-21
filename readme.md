@@ -5,14 +5,14 @@
 Tested with latest MAME version 0.234
 (Compatible with MAME and WolfMAME versions from 0.196 upwards)
 
-At the moment,  the plugin only helps you with the springs stage.  I plan to add help to all other stages.
+At the moment,  the plugin only helps you with the springs stage.  I plan to add help to other stages.
 
 ### Springs Stage
 
-The helper visualises the safe zones and danger zones on DK's girder.  The displayed information about generated springs helps you make quick decisions on when to make a run and when to sit tight or retreat back to safety.
+The helper visualises the safe zones and danger zones on DK's girder.  Information about generated springs helps you make quick decisions on when to make a run and when to sit tight or retreat back to safety.
 
- - 2 fixed safe zones appear in translucent green on DK's girder
- - 3 variable danger zones appear in translucent red on DK's girder.  These zones mark the location of the bouncing spring.  The danger zones update progressively more quickly as you progress from level 1 to level 4.  Level 4 to level 22 are the same.
+ - 2 fixed safe zones appear in green on DK's girder
+ - 3 variable danger zones appear in red on DK's girder.  These zones mark the location of the bouncing springs.
  - All generated springs are assigned a "spring type" of between 0 and 15 depending on their length.  The shortest spring has type 0,  the longest has type 15.
  - The spring type appears in the top-left of screen, close to where the springs are released.
  - An alert appears for short (0-6) and long (12-15) springs.  Helping you to identify these springs so you can react quickly.
@@ -23,7 +23,7 @@ Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min He
 ![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot.png)
 
 
-#### Process for progressing on the springs stage level 4+.
+#### Process for progressing on the springs stage level 4+
 
  - Navigate Jumpman to the first green safe spot on the far right of DK's girder.
  - Move to the left edge of the safe spot, ensuring that Jumpman's feet remain inside the box.
@@ -52,3 +52,12 @@ The Plugin is installed by copying the "dkcoach" folder into your MAME plugins f
 The Plugin is activated by adding `-plugin dkcoach` to your mame arguments e.g.
 
 ```mame dkong -plugin dkcoach```  
+
+### Next up
+
+Addition of barrel stage helper
+ - safe zones from wild barrels
+ - wild barrel alert 
+ - probability of steering barrels down ladders % 
+ - hammer timer countdown
+ - Max jump distance markers (maybe)
