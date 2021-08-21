@@ -1,5 +1,5 @@
 -- DK Coach by Jon Wilson (10yard)
--- Tested with MAME version 0.234
+-- Tested with latest MAME versions 0.234 and 0.196
 -- Compatible with MAME versions from 0.196
 -- Use P2 to toggle the helpfulness setting between 2 (Max), 1 (Min) and 0 (None)
 -- mame dkong -plugin dkcoach
@@ -81,8 +81,8 @@ function dkcoach.startplugin()
 	function main()
 		if version >= 0.196 then
 			-- overwrite the rom's highscore text
-			write_message(0xc76e0, "   DK COACH    ".."TOGGLE")
-			write_message(0xc76e1, "   DK COACH   "..help_setting_name[help_setting].." HELP")
+			write_message(0xc76e0, "    DK COACH   ".."TOGGLE")
+			write_message(0xc7521, help_setting_name[help_setting].." HELP")
 
 			-- check for P2 button press
 			if string.sub(int_to_bin(mem:read_i8(0xc7d00)), 5, 5) == "1" then
