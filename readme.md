@@ -2,7 +2,8 @@
 
 ## A MAME plugin to assist with Donkey Kong gameplay 
 
-Compatible with MAME and WolfMAME versions 0.196 and above.
+Tested with MAME version 0.234
+Compatible with MAME versions from 0.196
 
 At the moment,  the plugin only helps you with the springs stage.
 
@@ -16,7 +17,11 @@ The helper visualises zones and provide you with information about the generated
  - The spring type appears in the top-left of screen, close to where the springs are released.
  - An alert appears for short (0-6) and long (12-15) springs.  Helping you to identify these springs so you can react quickly.
 
+Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min Help) and 0 (No Help)
+
+
 ![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot.png)
+
 
 #### Process for progressing on the springs stage.
 
