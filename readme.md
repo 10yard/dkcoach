@@ -2,7 +2,7 @@
 
 ## A MAME plugin to assist with Donkey Kong gameplay 
 
-Compatible with MAME and WolfMAME versions 0.227 and above.  I may backport it to earlier versions.
+Compatible with MAME and WolfMAME versions 0.196 and above.
 
 At the moment,  the plugin only helps you with the elevator/springs stage.
  - All generated springs are assigned a "spring type" of between 0 and 15 dependant on their length.  The shortest spring has length 0,  the longest has length 15.

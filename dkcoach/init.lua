@@ -1,5 +1,5 @@
 -- DK Coach by Jon Wilson (10yard)
--- Requires MAME version 0.227 and above
+-- Requires MAME version 0.196 and above
 -- mame dkong -plugin dkcoach
 
 local exports = {}
@@ -11,63 +11,77 @@ exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
 function dkcoach.startplugin()
-	function main()
-		-- overwrite the rom's highscore text
-		write_message(0xc76e0, "   DK COACH   ")
+	-- Plugin globals
+	valid_version = true
+	char_table = {}
+	char_table["0"] = 0x00
+	char_table["1"] = 0x01
+	char_table["2"] = 0x02
+	char_table["3"] = 0x03
+	char_table["4"] = 0x04
+	char_table["5"] = 0x05
+	char_table["6"] = 0x06
+	char_table["7"] = 0x07
+	char_table["8"] = 0x08
+	char_table["9"] = 0x09
+	char_table[" "] = 0x10
+	char_table["A"] = 0x11
+	char_table["B"] = 0x12
+	char_table["C"] = 0x13
+	char_table["D"] = 0x14
+	char_table["E"] = 0x15
+	char_table["F"] = 0x16
+	char_table["G"] = 0x17
+	char_table["H"] = 0x18
+	char_table["I"] = 0x19
+	char_table["J"] = 0x1a
+	char_table["K"] = 0x1b
+	char_table["L"] = 0x1c
+	char_table["M"] = 0x1d
+	char_table["N"] = 0x1e
+	char_table["O"] = 0x1f
+	char_table["P"] = 0x20
+	char_table["Q"] = 0x21
+	char_table["R"] = 0x22
+	char_table["S"] = 0x23
+	char_table["T"] = 0x24
+	char_table["U"] = 0x25
+	char_table["V"] = 0x26
+	char_table["W"] = 0x27
+	char_table["X"] = 0x28
+	char_table["Y"] = 0x29
+	char_table["Z"] = 0x2a
+	char_table["="] = 0x34
+	char_table["'"] = 0x3d
 
-		-- stage specific action
-		stage = mem:read_i8(0xc6227)
-		if stage == 3 then
-			spring_coach()
+	function initialize()
+		version = tonumber(emu.app_version())
+		if version >= 0.227 then
+			cpu = manager.machine.devices[":maincpu"]
+			scr = manager.machine.screens[":screen"]
+			mem = cpu.spaces["program"]
+		elseif version >= 0.196 then
+			cpu = manager:machine().devices[":maincpu"]
+			scr = manager:machine().screens[":screen"]
+			mem = cpu.spaces["program"]
+		else
+			print("----------------------------------------------------------")
+			print("The dkcoach plugin requires MAME version 0.196 or greater.")
+			print("----------------------------------------------------------")
 		end
 	end
 
-	function initialize()
-		cpu = manager.machine.devices[":maincpu"]
-		scr = manager.machine.screens[":screen"]
-		mem = cpu.spaces["program"]
-		
-		dkchars = {}
-		dkchars["0"] = 0x00
-		dkchars["1"] = 0x01
-		dkchars["2"] = 0x02
-		dkchars["3"] = 0x03
-		dkchars["4"] = 0x04
-		dkchars["5"] = 0x05
-		dkchars["6"] = 0x06
-		dkchars["7"] = 0x07
-		dkchars["8"] = 0x08
-		dkchars["9"] = 0x09
-		dkchars[" "] = 0x10
-		dkchars["A"] = 0x11
-		dkchars["B"] = 0x12
-		dkchars["C"] = 0x13
-		dkchars["D"] = 0x14
-		dkchars["E"] = 0x15
-		dkchars["F"] = 0x16
-		dkchars["G"] = 0x17
-		dkchars["H"] = 0x18
-		dkchars["I"] = 0x19
-		dkchars["J"] = 0x1a
-		dkchars["K"] = 0x1b
-		dkchars["L"] = 0x1c
-		dkchars["M"] = 0x1d
-		dkchars["N"] = 0x1e
-		dkchars["O"] = 0x1f
-		dkchars["P"] = 0x20
-		dkchars["Q"] = 0x21
-		dkchars["R"] = 0x22
-		dkchars["S"] = 0x23
-		dkchars["T"] = 0x24
-		dkchars["U"] = 0x25
-		dkchars["V"] = 0x26
-		dkchars["W"] = 0x27
-		dkchars["X"] = 0x28
-		dkchars["Y"] = 0x29
-		dkchars["Z"] = 0x2a
-		dkchars["="] = 0x34
-		dkchars["("] = 0x3b
-		dkchars[")"] = 0x3c
+	function main()
+		if version >= 0.196 then
+			-- overwrite the rom's highscore text
+			write_message(0xc76e0, "   DK COACH   ")
+
+			-- stage specific action
+			local stage = mem:read_i8(0xc6227)
+			if stage == 3 then
+				spring_coach()
+			end
+		end
 	end
 
 	function spring_coach()
@@ -77,9 +91,9 @@ function dkcoach.startplugin()
 			draw_box("spring-safe", 185, 100, 168, 118)
 			
 			-- Determine the spring type (0-15) of generated springs
-			for i, addr in ipairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
-				s_x = mem:read_u8(addr + 3)
-				s_y = mem:read_u8(addr + 5)
+			for _, address in pairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
+				local s_x = mem:read_u8(address + 3)
+				local s_y = mem:read_u8(address + 5)
 				if s_y == 80 then             -- y start position of new springs is always 80
 					if s_x >= 248 then        -- x start position is between 248 and 7
 						s_type = s_x - 248
@@ -98,9 +112,9 @@ function dkcoach.startplugin()
 				write_message(0xc77a5, "T="..string.format("%02d", s_type))
 				write_message(0xc77a6, "       ")
 				if s_type >= 13 then
-					write_message(0xc77a6, "(LONG)")
+					write_message(0xc77a6, "'LONG'")
 				elseif s_type <= 6 then
-					write_message(0xc77a6, "(SHORT)")
+					write_message(0xc77a6, "'SHORT'")
 				end			
 				--1st and 2nd bounce boxes use the latest spring type.
 				draw_box("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
@@ -117,20 +131,30 @@ function dkcoach.startplugin()
 
 	function write_message(start_address, text)
 		-- write characters of message to DK's video ram
-		local _dkchars = dkchars
+		local _char_table = char_table
 		for key=1, string.len(text) do
-			mem:write_i8(start_address - ((key - 1) * 32), _dkchars[string.sub(text, key, key)])
+			mem:write_i8(start_address - ((key - 1) * 32), _char_table[string.sub(text, key, key)])
 		end
 	end	
 
 	function draw_box(type, y1, x1, y2, x2)
+		-- Note that draw_box syntax differs across LUA versions
 		if type == "spring-hazard" then
-			scr:draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
+			if version >= 0.227 then
+				scr:draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
+			else
+				scr:draw_box(y1, x1, y2, x2, 0x66ff0000, 0xffff0000)
+			end
 			scr:draw_line(y1, x1, y2, x2, 0xffff0000)
 			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
 		elseif type == "spring-safe" then
-			scr:draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
-			scr:draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
+			if version >= 0.227 then
+				scr:draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
+				scr:draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
+			else
+				scr:draw_box(y1, x1, y2, x2, 0x00000000, 0xff00ff00)
+				scr:draw_box(y1, x1, y2 + 4, x2, 0x6000ff00, 0x00000000)
+			end
 		end
 	end
 
