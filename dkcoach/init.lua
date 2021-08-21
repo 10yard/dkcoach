@@ -1,5 +1,7 @@
 -- DK Coach by Jon Wilson (10yard)
--- Requires MAME version 0.196 and above
+-- Tested with MAME version 0.234
+-- Compatible with MAME versions from 0.196
+-- Use P2 to toggle the help setting between 2 (Full), 1 (Partial) and 0 (None)
 -- mame dkong -plugin dkcoach
 
 local exports = {}
@@ -12,7 +14,6 @@ local dkcoach = exports
 
 function dkcoach.startplugin()
 	-- Plugin globals
-	valid_version = true
 	char_table = {}
 	char_table["0"] = 0x00
 	char_table["1"] = 0x01
@@ -55,6 +56,8 @@ function dkcoach.startplugin()
 	char_table["'"] = 0x3d
 
 	function initialize()
+		help_setting = 2
+		last_help_toggle = os.clock()
 		version = tonumber(emu.app_version())
 		if version >= 0.227 then
 			cpu = manager.machine.devices[":maincpu"]
@@ -76,6 +79,17 @@ function dkcoach.startplugin()
 			-- overwrite the rom's highscore text
 			write_message(0xc76e0, "   DK COACH   ")
 
+			-- check for P2 button press
+			if string.sub(int_to_bin(mem:read_i8(0xc7d00)), 5, 5) == "1" then
+				if os.clock() - last_help_toggle > 0.25 then
+					help_setting = help_setting - 1
+					if help_setting < 0 then
+						help_setting = 2
+					end
+					last_help_toggle = os.clock()
+				end
+			end
+
 			-- stage specific action
 			local stage = mem:read_i8(0xc6227)
 			if stage == 3 then
@@ -85,11 +99,13 @@ function dkcoach.startplugin()
 	end
 
 	function spring_coach()
-		if mem:read_i8(0xc600a) == 0xc then -- During gameplay
-			-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
-			draw_box("spring-safe", 185, 148, 168, 168)
-			draw_box("spring-safe", 185, 100, 168, 118)
-			
+		if mem:read_i8(0xc600a) == 0xc and help_setting > 0 then  -- During gameplay
+			if help_setting == 2 then
+				-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
+				draw_zone("spring-safe", 185, 148, 168, 168)
+				draw_zone("spring-safe", 185, 100, 168, 118)
+			end
+
 			-- Determine the spring type (0-15) of generated springs
 			for _, address in pairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
 				local s_x = mem:read_u8(address + 3)
@@ -106,7 +122,7 @@ function dkcoach.startplugin()
 					s_type_trailing = s_type
 				end
 			end
-			
+
 			if s_type ~= nil then
 				-- Update screen with spring info
 				write_message(0xc77a5, "T="..string.format("%02d", s_type))
@@ -115,16 +131,18 @@ function dkcoach.startplugin()
 					write_message(0xc77a6, "'LONG'")
 				elseif s_type <= 6 then
 					write_message(0xc77a6, "'SHORT'")
-				end			
-				--1st and 2nd bounce boxes use the latest spring type.
-				draw_box("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
-				draw_box("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
-				--3rd bounce box uses the trailing spring type on levels 4 and above
-				draw_box("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)	
+				end
+				if help_setting == 2 then
+					--1st and 2nd bounce boxes use the latest spring type.
+					draw_zone("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
+					draw_zone("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
+					--3rd bounce box uses the trailing spring type on levels 4 and above
+					draw_zone("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)
+				end
 			end
 		else
 			-- Clear screen info
-			write_message(0xc77a5, "    ")		
+			write_message(0xc77a5, "    ")
 			write_message(0xc77a6, "       ")
 		end
 	end
@@ -137,26 +155,35 @@ function dkcoach.startplugin()
 		end
 	end	
 
-	function draw_box(type, y1, x1, y2, x2)
-		-- Note that draw_box syntax differs across LUA versions
+	function version_draw_box(y1, x1, y2, x2, c1, c2)
+		-- This function handles the version specific syntax of draw_box
+		if version >= 0.227 then
+			scr:draw_box(y1, x1, y2, x2, c1, c2)
+		else
+			scr:draw_box(y1, x1, y2, x2, c2, c1)
+		end
+	end
+
+	function draw_zone(type, y1, x1, y2, x2)
 		if type == "spring-hazard" then
-			if version >= 0.227 then
-				scr:draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
-			else
-				scr:draw_box(y1, x1, y2, x2, 0x66ff0000, 0xffff0000)
-			end
+			version_draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
 			scr:draw_line(y1, x1, y2, x2, 0xffff0000)
 			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
 		elseif type == "spring-safe" then
-			if version >= 0.227 then
-				scr:draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
-				scr:draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
-			else
-				scr:draw_box(y1, x1, y2, x2, 0x00000000, 0xff00ff00)
-				scr:draw_box(y1, x1, y2 + 4, x2, 0x6000ff00, 0x00000000)
-			end
+			version_draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
+			version_draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
 		end
 	end
+
+	function int_to_bin(x)
+		local ret = ""
+		while x~=1 and x~=0 do
+			ret = tostring(x%2) .. ret
+			x=math.modf(x/2)
+		end
+		ret = tostring(x)..ret
+		return string.format("%08d", ret)
+    end
 
 	emu.register_start(function()
 		initialize()
