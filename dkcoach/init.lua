@@ -107,7 +107,18 @@ function dkcoach.startplugin()
 	end
 
 	function spring_coach()
-		if mem:read_i8(0xc600a) == 0xc and help_setting > 1 then  -- During gameplay
+		if mem:read_u8(0xc600a) == 0xc and help_setting > 1 then  -- During gameplay
+
+			-- Change Jumpman's start position to focus coaching on DK's Girder.
+			if help_setting > 1 then
+				if mem:read_u8(0xc694c) == 22 and mem:read_u8(0xc694f) == 224 then
+					mem:write_u8(0x694c, 180)
+					mem:write_u8(0x6203, 180)
+					mem:write_u8(0x694f, 112)
+					mem:write_u8(0x6205, 112)
+				end
+			end
+
 			if help_setting == 3 then
 				-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
 				draw_zone("spring-safe", 185, 148, 168, 168)
