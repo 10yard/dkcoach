@@ -61,4 +61,3 @@ Addition of barrel stage helper
  - wild barrel alert 
  - probability of steering barrels down ladders % 
  - hammer timer countdown
- - Max jump distance markers (maybe)

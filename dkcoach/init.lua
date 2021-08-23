@@ -4,13 +4,14 @@
 -- Compatible with MAME versions from 0.196
 -- Use P2 to toggle the helpfulness setting between 3 (Max), 2 (Min) and 1 (None)
 --
--- mame dkong -plugin dkcoach
+-- Minimum start up arguments:
+--   mame dkong -plugin dkcoach
 
 local exports = {}
 exports.name = "dkcoach"
-exports.version = "1.0.0"
+exports.version = "0.1.0"
 exports.description = "Donkey Kong Coach"
-exports.license = "The BSD 3-Clause License"
+exports.license = "GNU GPLv3"
 exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
@@ -54,22 +55,28 @@ function dkcoach.startplugin()
 	char_table["X"] = 0x28
 	char_table["Y"] = 0x29
 	char_table["Z"] = 0x2a
+	char_table["_"] = 0x2f
 	char_table["="] = 0x34
+	char_table["!"] = 0x38
 	char_table["'"] = 0x3d
 	help_setting_name = {}
 	help_setting_name[1] = " NO"
 	help_setting_name[2] = "MIN"
 	help_setting_name[3] = "MAX"
+	default_start_x = 22
+	default_start_y = 224
+	coach_start_x = 180
+	coach_start_y = 112
 
 	function initialize()
 		help_setting = 3
 		last_help_toggle = os.clock()
-		version = tonumber(emu.app_version())
-		if version >= 0.227 then
+		mame_version = tonumber(emu.app_version())
+		if mame_version >= 0.227 then
 			cpu = manager.machine.devices[":maincpu"]
 			scr = manager.machine.screens[":screen"]
 			mem = cpu.spaces["program"]
-		elseif version >= 0.196 then
+		elseif mame_version >= 0.196 then
 			cpu = manager:machine().devices[":maincpu"]
 			scr = manager:machine().screens[":screen"]
 			mem = cpu.spaces["program"]
@@ -81,13 +88,13 @@ function dkcoach.startplugin()
 	end
 
 	function main()
-		if version >= 0.196 then
+		if mame_version >= 0.196 then
 			-- overwrite the rom's highscore text with title and display the active help setting.
-			write_message(0xc76e0, "    DK COACH   ".."TOGGLE")
-			write_message(0xc7521, help_setting_name[help_setting].." HELP")
+			write_message(0x76e0, "    DK COACH   ".."TOGGLE")
+			write_message(0x7521, help_setting_name[help_setting].." HELP")
 
 			-- check for P2 button press.
-			if string.sub(int_to_bin(mem:read_i8(0xc7d00)), 5, 5) == "1" then
+			if string.sub(int_to_bin(mem:read_i8(0x7d00)), 5, 5) == "1" then
 				if os.clock() - last_help_toggle > 0.25 then
 					-- toggle the active help setting
 					help_setting = help_setting - 1
@@ -99,7 +106,7 @@ function dkcoach.startplugin()
 			end
 
 			-- stage specific action
-			local stage = mem:read_i8(0xc6227)
+			local stage = mem:read_i8(0x6227)
 			if stage == 3 then
 				spring_coach()
 			end
@@ -110,12 +117,14 @@ function dkcoach.startplugin()
 		if mem:read_u8(0xc600a) == 0xc and help_setting > 1 then  -- During gameplay
 
 			-- Change Jumpman's start position to focus coaching on DK's Girder.
-			if help_setting > 1 then
-				if mem:read_u8(0xc694c) == 22 and mem:read_u8(0xc694f) == 224 then
-					mem:write_u8(0x694c, 180)
-					mem:write_u8(0x6203, 180)
-					mem:write_u8(0x694f, 112)
-					mem:write_u8(0x6205, 112)
+			if mem:read_u8(0x694c) == default_start_x and mem:read_u8(0x694f) == default_start_y then
+				write_message(0x75ed, "START ")
+				write_message(0x75ee, "HERE__")
+				change_jumpman_position(coach_start_x, coach_start_y)
+			else
+				if mem:read_u8(0x694f) < 112 then
+					write_message(0x75ed, "      ")
+					write_message(0x75ee, "      ")
 				end
 			end
 
@@ -126,7 +135,7 @@ function dkcoach.startplugin()
 			end
 
 			-- Determine the spring type (0-15) of generated springs
-			for _, address in pairs({0xc6500, 0xc6510, 0xc6520, 0xc6530, 0xc6540, 0xc6550}) do
+			for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
 				local s_x = mem:read_u8(address + 3)
 				local s_y = mem:read_u8(address + 5)
 				if s_y == 80 then             -- y start position of new springs is always 80
@@ -136,7 +145,7 @@ function dkcoach.startplugin()
 						s_type = s_x + 8
 					end
 				end
-				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0xc6229) < 4 then
+				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0x6229) < 4 then
 					-- Remember type of the trailing string.
 					s_type_trailing = s_type
 				end
@@ -144,12 +153,12 @@ function dkcoach.startplugin()
 
 			if s_type ~= nil then
 				-- Update screen with spring info
-				write_message(0xc77a5, "T="..string.format("%02d", s_type))
-				write_message(0xc77a6, "       ")
+				write_message(0x77a5, "T="..string.format("%02d", s_type))
+				write_message(0x77a6, "       ")
 				if s_type >= 13 then
-					write_message(0xc77a6, "'LONG'")
+					write_message(0x77a6, "'LONG'")
 				elseif s_type <= 6 then
-					write_message(0xc77a6, "'SHORT'")
+					write_message(0x77a6, "'SHORT'")
 				end
 				if help_setting == 3 then
 					--1st and 2nd bounce boxes use the latest spring type.
@@ -161,9 +170,25 @@ function dkcoach.startplugin()
 			end
 		else
 			-- Clear screen info
-			write_message(0xc77a5, "    ")
-			write_message(0xc77a6, "       ")
+			write_message(0x77a5, "    ")
+			write_message(0x77a6, "       ")
+			write_message(0x75ed, "      ")
+			write_message(0x75ee, "      ")
+
+			-- Change Jumpman's position back to default if necessary.
+			if os.clock() - last_help_toggle < 0.05 then
+				if mem:read_u8(0x694c) == coach_start_x and mem:read_u8(0x694f) == coach_start_y then
+					change_jumpman_position(default_start_x, default_start_y)
+				end
+			end
 		end
+	end
+
+	function change_jumpman_position(x, y)
+		mem:write_u8(0x694c, x)
+		mem:write_u8(0x694f, y)
+		mem:write_u8(0x6203, x)
+		mem:write_u8(0x6205, y)
 	end
 
 	function write_message(start_address, text)
@@ -176,7 +201,7 @@ function dkcoach.startplugin()
 
 	function version_draw_box(y1, x1, y2, x2, c1, c2)
 		-- This function handles the version specific syntax of draw_box
-		if version >= 0.227 then
+		if mame_version >= 0.227 then
 			scr:draw_box(y1, x1, y2, x2, c1, c2)
 		else
 			scr:draw_box(y1, x1, y2, x2, c2, c1)
@@ -190,7 +215,7 @@ function dkcoach.startplugin()
 			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
 		elseif type == "spring-safe" then
 			version_draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
-			version_draw_box(y1, x1, y2 + 4, x2, 0x00000000, 0x6000ff00)
+			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x6000ff00)
 		end
 	end
 
