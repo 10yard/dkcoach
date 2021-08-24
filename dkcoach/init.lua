@@ -9,7 +9,7 @@
 
 local exports = {}
 exports.name = "dkcoach"
-exports.version = "0.1.0"
+exports.version = "0.1"
 exports.description = "Donkey Kong Coach"
 exports.license = "GNU GPLv3"
 exports.author = { name = "Jon Wilson (10yard)" }
@@ -114,71 +114,73 @@ function dkcoach.startplugin()
 	end
 
 	function spring_coach()
-		if mem:read_u8(0xc600a) == 0xc and help_setting > 1 then  -- During gameplay
+		if mem:read_u8(0xc600a) == 0xc then
+			if help_setting > 1 then  -- During gameplay
 
-			-- Change Jumpman's start position to focus coaching on DK's Girder.
-			if mem:read_u8(0x694c) == default_start_x and mem:read_u8(0x694f) == default_start_y then
-				write_message(0x75ed, "START ")
-				write_message(0x75ee, "HERE__")
-				change_jumpman_position(coach_start_x, coach_start_y)
-			else
-				if mem:read_u8(0x694f) < 112 then
-					write_message(0x75ed, "      ")
-					write_message(0x75ee, "      ")
-				end
-			end
-
-			if help_setting == 3 then
-				-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
-				draw_zone("spring-safe", 185, 148, 168, 168)
-				draw_zone("spring-safe", 185, 100, 168, 118)
-			end
-
-			-- Determine the spring type (0-15) of generated springs
-			for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
-				local s_x = mem:read_u8(address + 3)
-				local s_y = mem:read_u8(address + 5)
-				if s_y == 80 then             -- y start position of new springs is always 80
-					if s_x >= 248 then        -- x start position is between 248 and 7
-						s_type = s_x - 248
-					elseif s_x <= 7 then
-						s_type = s_x + 8
+				-- Change Jumpman's start position to focus coaching on DK's Girder.
+				if mem:read_u8(0x694c) == default_start_x and mem:read_u8(0x694f) == default_start_y then
+					write_message(0x75ed, "START ")
+					write_message(0x75ee, "HERE__")
+					change_jumpman_position(coach_start_x, coach_start_y)
+				else
+					if mem:read_u8(0x694f) < 112 then
+						write_message(0x75ed, "      ")
+						write_message(0x75ee, "      ")
 					end
 				end
-				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0x6229) < 4 then
-					-- Remember type of the trailing string.
-					s_type_trailing = s_type
-				end
-			end
 
-			if s_type ~= nil then
-				-- Update screen with spring info
-				write_message(0x77a5, "T="..string.format("%02d", s_type))
-				write_message(0x77a6, "       ")
-				if s_type >= 13 then
-					write_message(0x77a6, "'LONG'")
-				elseif s_type <= 6 then
-					write_message(0x77a6, "'SHORT'")
-				end
 				if help_setting == 3 then
-					--1st and 2nd bounce boxes use the latest spring type.
-					draw_zone("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
-					draw_zone("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
-					--3rd bounce box uses the trailing spring type on levels 4 and above
-					draw_zone("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)
+					-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
+					draw_zone("spring-safe", 185, 148, 168, 168)
+					draw_zone("spring-safe", 185, 100, 168, 118)
 				end
-			end
-		else
-			-- Clear screen info
-			write_message(0x77a5, "    ")
-			write_message(0x77a6, "       ")
-			write_message(0x75ed, "      ")
-			write_message(0x75ee, "      ")
 
-			-- Change Jumpman's position back to default if necessary.
-			if os.clock() - last_help_toggle < 0.05 then
-				if mem:read_u8(0x694c) == coach_start_x and mem:read_u8(0x694f) == coach_start_y then
-					change_jumpman_position(default_start_x, default_start_y)
+				-- Determine the spring type (0-15) of generated springs
+				for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
+					local s_x = mem:read_u8(address + 3)
+					local s_y = mem:read_u8(address + 5)
+					if s_y == 80 then             -- y start position of new springs is always 80
+						if s_x >= 248 then        -- x start position is between 248 and 7
+							s_type = s_x - 248
+						elseif s_x <= 7 then
+							s_type = s_x + 8
+						end
+					end
+					if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0x6229) < 4 then
+						-- Remember type of the trailing string.
+						s_type_trailing = s_type
+					end
+				end
+
+				if s_type ~= nil then
+					-- Update screen with spring info
+					write_message(0x77a5, "T="..string.format("%02d", s_type))
+					write_message(0x77a6, "       ")
+					if s_type >= 13 then
+						write_message(0x77a6, "'LONG'")
+					elseif s_type <= 6 then
+						write_message(0x77a6, "'SHORT'")
+					end
+					if help_setting == 3 then
+						--1st and 2nd bounce boxes use the latest spring type.
+						draw_zone("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
+						draw_zone("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
+						--3rd bounce box uses the trailing spring type on levels 4 and above
+						draw_zone("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)
+					end
+				end
+			else
+				-- Clear screen info
+				write_message(0x77a5, "    ")
+				write_message(0x77a6, "       ")
+				write_message(0x75ed, "      ")
+				write_message(0x75ee, "      ")
+
+				-- Change Jumpman's position back to default if necessary.
+				if os.clock() - last_help_toggle < 0.05 then
+					if mem:read_u8(0x694c) == coach_start_x and mem:read_u8(0x694f) == coach_start_y then
+						change_jumpman_position(default_start_x, default_start_y)
+					end
 				end
 			end
 		end

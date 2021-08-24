@@ -1,4 +1,4 @@
-+# **DK Coach** #
+# **DK Coach** #
 
 ## A MAME plugin to assist with Donkey Kong gameplay 
 
@@ -7,7 +7,8 @@ Tested with latest MAME version 0.234
 
 At the moment,  the plugin only helps you with the springs stage.  I plan to add help to other stages.
 
-### Springs Stage
+
+## The Springs/Elevators Stage
 
 The helper visualises the safe zones and danger zones on DK's girder.  Information about generated springs helps you make quick decisions on when to make a run and when to sit tight or retreat back to safety.
 
@@ -24,7 +25,7 @@ Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min He
 ![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot.png)
 
 
-#### Process for progressing on the springs stage level 4+
+#### Tips for completing the Springs stage, level 4+
 
  - Navigate Jumpman to the first green safe spot on the far right of DK's girder.
  - Move to the left edge of the safe spot, ensuring that Jumpman's feet remain inside the box.
@@ -36,7 +37,7 @@ Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min He
  - As you become more confident on the springs stage,  you should reduce helpers by pressing "P2 Start" button.  See "Help Settings" below.
  
 
-### Help Settings
+## Help Settings
 
 The default setting is "Max Help".  Toggle the setting by pressing "P2 Start".
   - Max Help: All of the available helpers are displayed.
@@ -46,18 +47,36 @@ The default setting is "Max Help".  Toggle the setting by pressing "P2 Start".
 As you become more confident with your gameplay,  you should reduce help features by pressing "P2 Start" button.  Switching from "Max Help" to "Min Help" to "No Help".
    
  
-### Installing
+## Installing and running
  
 The Plugin is installed by copying the "dkcoach" folder into your MAME plugins folder.
 
-The Plugin is activated by adding `-plugin dkcoach` to your mame arguments e.g.
+The Plugin is run by adding `-plugin dkcoach` to your MAME arguments e.g.
 
 ```mame dkong -plugin dkcoach```  
 
-### Next up
+
+## What's next?
 
 Addition of barrel stage helper
  - safe zones from wild barrels
  - wild barrel alert 
  - probability of steering barrels down ladders % 
  - hammer timer countdown
+ 
+
+## Thanks to
+
+The Donkey Kong rom hacking resource
+https://github.com/furrykef/dkdasm 
+
+The MAMEdev team
+https://docs.mamedev.org/
+
+
+## Feedback
+
+Please send feedback to jon123wilson@hotmail.com
+
+Jon
+
