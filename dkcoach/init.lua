@@ -17,7 +17,7 @@ local dkcoach = exports
 
 function dkcoach.startplugin()
 	-- Plugin globals
-	char_table = {}
+	local char_table = {}
 	char_table["0"] = 0x00
 	char_table["1"] = 0x01
 	char_table["2"] = 0x02
@@ -56,20 +56,29 @@ function dkcoach.startplugin()
 	char_table["Y"] = 0x29
 	char_table["Z"] = 0x2a
 	char_table["_"] = 0x2f
+	char_table["<"] = 0x30
+	char_table[">"] = 0x31
 	char_table["="] = 0x34
+	char_table["-"] = 0x35
 	char_table["!"] = 0x38
 	char_table["'"] = 0x3d
+	char_table["^"] = 0xfe
+	help_setting = 3
 	help_setting_name = {}
 	help_setting_name[1] = " NO"
 	help_setting_name[2] = "MIN"
 	help_setting_name[3] = "MAX"
-	default_start_x = 22
-	default_start_y = 224
-	coach_start_x = 180
-	coach_start_y = 112
+	spring_default_start_x = 22
+	spring_default_start_y = 224
+	spring_coach_start_x = 180
+	spring_coach_start_y = 112
+	barrel_default_start_x = 63
+	barrel_default_start_y = 240
+	barrel_coach_start_x = 115
+	barrel_coach_start_y = 206
+
 
 	function initialize()
-		help_setting = 3
 		last_help_toggle = os.clock()
 		mame_version = tonumber(emu.app_version())
 		if mame_version >= 0.227 then
@@ -89,6 +98,9 @@ function dkcoach.startplugin()
 
 	function main()
 		if mame_version >= 0.196 then
+			stage = mem:read_i8(0x6227)
+			mode2 = mem:read_u8(0xc600a)
+
 			-- overwrite the rom's highscore text with title and display the active help setting.
 			write_message(0x76e0, "    DK COACH   ".."TOGGLE")
 			write_message(0x7521, help_setting_name[help_setting].." HELP")
@@ -104,83 +116,164 @@ function dkcoach.startplugin()
 					last_help_toggle = os.clock()
 				end
 			end
-
-			-- stage specific action
-			local stage = mem:read_i8(0x6227)
-			if stage == 3 then
-				spring_coach()
+			
+			-- stage specific action during gamplay			
+			if mode2 == 0xc then
+				if stage == 1 then
+					barrel_coach()
+				elseif stage == 3 then
+					spring_coach()
+				end
 			end
 		end
 	end
 
-	function spring_coach()
-		if mem:read_u8(0xc600a) == 0xc then
-			if help_setting > 1 then  -- During gameplay
-
-				-- Change Jumpman's start position to focus coaching on DK's Girder.
-				if mem:read_u8(0x694c) == default_start_x and mem:read_u8(0x694f) == default_start_y then
-					write_message(0x75ed, "START ")
-					write_message(0x75ee, "HERE__")
-					change_jumpman_position(coach_start_x, coach_start_y)
-				else
-					if mem:read_u8(0x694f) < 112 then
-						write_message(0x75ed, "      ")
-						write_message(0x75ee, "      ")
-					end
-				end
-
-				if help_setting == 3 then
-					-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
-					draw_zone("spring-safe", 185, 148, 168, 168)
-					draw_zone("spring-safe", 185, 100, 168, 118)
-				end
-
-				-- Determine the spring type (0-15) of generated springs
-				for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
-					local s_x = mem:read_u8(address + 3)
-					local s_y = mem:read_u8(address + 5)
-					if s_y == 80 then             -- y start position of new springs is always 80
-						if s_x >= 248 then        -- x start position is between 248 and 7
-							s_type = s_x - 248
-						elseif s_x <= 7 then
-							s_type = s_x + 8
-						end
-					end
-					if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0x6229) < 4 then
-						-- Remember type of the trailing string.
-						s_type_trailing = s_type
-					end
-				end
-
-				if s_type ~= nil then
-					-- Update screen with spring info
-					write_message(0x77a5, "T="..string.format("%02d", s_type))
-					write_message(0x77a6, "       ")
-					if s_type >= 13 then
-						write_message(0x77a6, "'LONG'")
-					elseif s_type <= 6 then
-						write_message(0x77a6, "'SHORT'")
-					end
-					if help_setting == 3 then
-						--1st and 2nd bounce boxes use the latest spring type.
-						draw_zone("spring-hazard", 183, 20 + s_type, 168, 33 + s_type)
-						draw_zone("spring-hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
-						--3rd bounce box uses the trailing spring type on levels 4 and above
-						draw_zone("spring-hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)
-					end
-				end
+    function barrel_coach()
+		if help_setting > 1 then
+			-- Change Jumpman's start position to focus coaching on DK's Girder.
+			if mem:read_u8(0x694c) == barrel_default_start_x and mem:read_u8(0x694f) == barrel_default_start_y then
+				write_message(0x7619, "-START HERE")
+				change_jumpman_position(barrel_coach_start_x, barrel_coach_start_y)
 			else
-				-- Clear screen info
-				write_message(0x77a5, "    ")
-				write_message(0x77a6, "       ")
-				write_message(0x75ed, "      ")
-				write_message(0x75ee, "      ")
+				if mem:read_u8(0x694f) < barrel_coach_start_y then
+					write_message(0x7619, "           ")
+				end
+			end		
+		
+			jm_x = mem:read_u8(0x6203)
+			jm_y = mem:read_u8(0x6205)
+			print(jm_x.."  "..jm_y)
 
-				-- Change Jumpman's position back to default if necessary.
-				if os.clock() - last_help_toggle < 0.05 then
-					if mem:read_u8(0x694c) == coach_start_x and mem:read_u8(0x694f) == coach_start_y then
-						change_jumpman_position(default_start_x, default_start_y)
+			if help_setting == 3 then
+				-- 3rd girder
+				draw_zone("mostlysafe", 94, 120, 75, 137)
+				draw_zone("safe", 95, 137, 76, 160)
+
+				-- 4th girder
+				draw_zone("mostlysafe", 130, 40, 111, 51)
+				draw_zone("mostlysafe", 131, 59, 110, 73)
+				draw_zone("hazard", 127, 80, 107, 130)
+				draw_zone("safe", 126, 130, 106, 150)
+
+				-- 5th girder
+				draw_zone("safe", 162, 128, 142, 183)
+				draw_zone("safe", 163, 193, 147, 218)
+			end
+
+			if jm_x >= 137 and jm_x <=175 and jm_y <= 175 and jm_y >= 158 then
+				write_message(0x76f4, "STEER")
+			elseif jm_x >= 74 and jm_x <=89 and jm_y <= 139 and jm_y >= 120 then
+				write_message(0x772c, "---WAIT")
+				write_message(0x762c, "UNTIL CLEAR")
+				write_message(0x74ac, "---")
+				write_message(0x76d0, "STEER")
+				write_message(0x7550, "STEER")
+			elseif jm_x >= 93 and jm_x <= 140 and jm_y <= 145 and jm_y >= 128 then
+				write_message(0x772c, "WATCH")
+				write_message(0x772d, "KONG!")
+				--write_message(0x76d0, "STEER")
+				write_message(0x7550, "STEER")
+			elseif jm_x >= 45 and jm_x <=69 and jm_y <= 136 and jm_y >= 92 then
+				write_message(0x772c, "WATCH")
+				write_message(0x772d, "KONG!")
+				write_message(0x76d0, "STEER")
+				write_message(0x7550, "STEER")
+			else
+				-- clear screen info
+				write_message(0x76d0, "     ")
+				write_message(0x7550, "     ")
+				write_message(0x76f4, "      ")
+				write_message(0x772c, "       ")
+				write_message(0x762c, "           ")
+				write_message(0x74ac, "   ")
+				write_message(0x772c, "     ")
+				write_message(0x772d, "     ")
+			end
+		else
+			-- Clear screen info
+			write_message(0x76d0, "     ")
+			write_message(0x7550, "     ")
+			write_message(0x76f4, "      ")
+			write_message(0x772c, "       ")
+			write_message(0x762c, "           ")
+			write_message(0x74ac, "   ")
+			write_message(0x772c, "     ")
+			write_message(0x772d, "     ")		
+			write_message(0x7619, "           ")
+		end
+	end
+
+	function spring_coach()
+		if help_setting > 1 then
+			-- Reset spring types at start of stage
+			if mode == 0xb then
+				s_type = nil
+				s_type_trailing = nil
+			end
+			
+			-- Change Jumpman's start position to focus coaching on DK's Girder.
+			if mem:read_u8(0x694c) == spring_default_start_x and mem:read_u8(0x694f) == spring_default_start_y then
+				write_message(0x75ed, "START ")
+				write_message(0x75ee, "HERE__")
+				change_jumpman_position(spring_coach_start_x, spring_coach_start_y)
+			else
+				if mem:read_u8(0x694f) < spring_coach_start_y then
+					write_message(0x75ed, "      ")
+					write_message(0x75ee, "      ")
+				end
+			end
+
+			if help_setting == 3 then
+				-- Draw safe spots.  Box includes a transparent bottom so you can reference jumpman's feet.  Feet need to stay within box to be safe.
+				draw_zone("safe", 185, 148, 168, 168)
+				draw_zone("safe", 185, 100, 168, 118)
+			end
+
+			-- Determine the spring type (0-15) of generated springs
+			for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
+				local s_x = mem:read_u8(address + 3)
+				local s_y = mem:read_u8(address + 5)
+				if s_y == 80 then             -- y start position of new springs is always 80
+					if s_x >= 248 then        -- x start position is between 248 and 7
+						s_type = s_x - 248
+					elseif s_x <= 7 then
+						s_type = s_x + 8
 					end
+				end
+				if (s_x >= 130 and s_x < 170 and s_y == 80) or s_type_trailing == nil or mem:read_i8(0x6229) < 4 then
+					-- Remember type of the trailing string.
+					s_type_trailing = s_type
+				end
+			end
+
+			if s_type ~= nil then
+				-- Update screen with spring info
+				write_message(0x77a5, "T="..string.format("%02d", s_type))
+				write_message(0x77a6, "       ")
+				if s_type >= 13 then
+					write_message(0x77a6, "'LONG'")
+				elseif s_type <= 5 then
+					write_message(0x77a6, "'SHORT'")
+				end
+				if help_setting == 3 then
+					--1st and 2nd bounce boxes use the latest spring type.
+					draw_zone("hazard", 183, 20 + s_type, 168, 33 + s_type)
+					draw_zone("hazard", 183, 20 + s_type + 50, 168, 33 + s_type + 50)
+					--3rd bounce box uses the trailing spring type on levels 4 and above
+					draw_zone("hazard", 183, 20 + s_type_trailing + 100, 168, 33 + s_type_trailing + 100)
+				end
+			end
+		else
+			-- Clear screen info
+			write_message(0x77a5, "    ")
+			write_message(0x77a6, "       ")
+			write_message(0x75ed, "      ")
+			write_message(0x75ee, "      ")
+
+			-- Change Jumpman's position back to default if necessary.
+			if os.clock() - last_help_toggle < 0.05 then
+				if mem:read_u8(0x694c) == spring_coach_start_x and mem:read_u8(0x694f) == spring_coach_start_y then
+					change_jumpman_position(spring_default_start_x, spring_default_start_y)
 				end
 			end
 		end
@@ -211,13 +304,16 @@ function dkcoach.startplugin()
 	end
 
 	function draw_zone(type, y1, x1, y2, x2)
-		if type == "spring-hazard" then
+		if type == "hazard" then
 			version_draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
 			scr:draw_line(y1, x1, y2, x2, 0xffff0000)
 			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
-		elseif type == "spring-safe" then
+		elseif type == "safe" then
 			version_draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
 			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x6000ff00)
+		elseif type == "mostlysafe" then
+			version_draw_box(y1, x1, y2, x2, 0xffffd800, 0x00000000)
+			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x60ffd800)
 		end
 	end
 

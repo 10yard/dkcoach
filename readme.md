@@ -16,7 +16,7 @@ The helper visualises the safe zones and danger zones on DK's girder.  Informati
  - 3 variable danger zones appear in red on DK's girder.  These zones mark the location of the bouncing springs.
  - All generated springs are assigned a "spring type" of between 0 and 15 depending on their length.  The shortest spring has type 0,  the longest has type 15.
  - The spring type appears in the top-left of screen, close to where the springs are released.
- - An alert appears for short (0-6) and long (12-15) springs.  Helping you to identify these springs so you can react quickly.
+ - An alert appears for short (0-5) and long (12-15) springs.  Helping you to identify these springs so you can react quickly.
  - Jumpman is repositioned at the top of the screen ready to climb the ladder up to DK's girder.  This ensures your coaching is focussed on the most difficult part of the stage.
 
 Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min Help) and 0 (No Help)
