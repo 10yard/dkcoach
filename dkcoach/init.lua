@@ -143,7 +143,8 @@ function dkcoach.startplugin()
 			dx = jm_x - 16
 			dy = 250 - jm_y
 			-- mark Jumpman's location with a spot (for debug)
-			-- version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
+			print(dx.."  "..dy)
+			version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
 
 			if help_setting == 3 then
 				-- 3rd girder
@@ -151,7 +152,7 @@ function dkcoach.startplugin()
 				draw_zone("safe", 95, 137, 76, 160)
 
 				-- 4th girder
-				draw_zone("safe", 126, 130, 106, 150)
+				draw_zone("safe", 125, 130, 105, 150)
 				draw_zone("hazard", 127, 80, 107, 130)
 
 				draw_zone("mostlysafe", 131, 59, 110, 73)
@@ -165,43 +166,50 @@ function dkcoach.startplugin()
 
 			if dx >= 120 and dx <= 160 and dy <= 95 and dy >= 75 then
 				--version_draw_box(95,120, 75, 160, 0xffffffff, 0x0)
-				write_message(0x76f4, "STEER")
-			elseif dx >= 80 and dx <= 150 and dy <= 127 and dy >= 106 then
-				--version_draw_box(127,80, 106, 150, 0xffffffff, 0x0)
+				write_message(0x7774, "STEER")
+				draw_zone("steer", 103, 64, 72, 72)
+			elseif dx >= 80 and dx <= 150 and dy <= 125 and dy >= 105 then
+				--version_draw_box(125,80, 105, 150, 0xffffffff, 0x0)
 				write_message(0x772c, "WATCH")
 				write_message(0x772d, "KONG!")
-				write_message(0x7550, "STEER")
+				write_message(0x7610, "STEER")
+				draw_zone("steer", 136, 168, 104, 176)
 			elseif dx >= 53 and dx <=73 and dy <= 131 and dy >= 110 then
 				--version_draw_box(131,73, 110, 52, 0xffffffff, 0x0)
-				write_message(0x772c, "   WAIT")
-				write_message(0x762c, "UNTIL CLEAR")
+				write_message(0x762c, "   WAIT    ")
+				write_message(0x762d, "UNTIL CLEAR")
 				write_message(0x74ac, "   ")
-				write_message(0x76d0, "STEER")
-				write_message(0x7550, "STEER")
+				write_message(0x7610, "STEER")
+				draw_zone("steer", 136, 168, 104, 176)
+				draw_zone("steer", 131, 72, 110, 80)
 			elseif dx >= 10 and dx <= 51 and dy <= 130 and dy >= 111 then
 				--version_draw_box(130,10, 111, 51, 0xffffffff, 0x0)
+				write_message(0x762c, "   WAIT    ")
+				write_message(0x762d, "UNTIL CLEAR")
 				write_message(0x772c, "WATCH")
 				write_message(0x772d, "KONG!")
-				write_message(0x76d0, "STEER")
-				write_message(0x7550, "STEER")
+				write_message(0x7610, "STEER")
+				draw_zone("steer", 136, 168, 104, 176)
+				draw_zone("steer", 131, 72, 110, 80)
 			else
 				-- clear screen info
-				write_message(0x76d0, "     ")
-				write_message(0x7550, "     ")
+				write_message(0x7774, "     ")
+				write_message(0x7610, "     ")
 				write_message(0x76f4, "      ")
-				write_message(0x772c, "       ")
-				write_message(0x762c, "           ")
+				write_message(0x762c, "       ")
+				write_message(0x762d, "           ")
 				write_message(0x74ac, "   ")
+				write_message(0x7650, "     ")
 				write_message(0x772c, "     ")
 				write_message(0x772d, "     ")
 			end
 		else
 			-- Clear screen info
-			write_message(0x76d0, "     ")
-			write_message(0x7550, "     ")
+			write_message(0x7774, "     ")
+			write_message(0x7610, "     ")
 			write_message(0x76f4, "      ")
-			write_message(0x772c, "       ")
-			write_message(0x762c, "           ")
+			write_message(0x762c, "       ")
+			write_message(0x762d, "           ")
 			write_message(0x74ac, "   ")
 			write_message(0x772c, "     ")
 			write_message(0x772d, "     ")		
@@ -320,6 +328,10 @@ function dkcoach.startplugin()
 		elseif type == "mostlysafe" then
 			version_draw_box(y1, x1, y2, x2, 0xffffd800, 0x00000000)
 			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x60ffd800)
+		elseif type == "steer" then
+			if math.fmod(mem:read_u8(0xc601a), 32) <= 16 then
+				version_draw_box(y1, x1, y2 , x2, 0x0, 0xbb0000ff)
+			end
 		end
 	end
 
