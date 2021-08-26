@@ -143,8 +143,8 @@ function dkcoach.startplugin()
 			dx = jm_x - 16
 			dy = 250 - jm_y
 			-- mark Jumpman's location with a spot (for debug)
-			print(dx.."  "..dy)
-			version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
+			--print(dx.."  "..dy)
+			--version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
 
 			if help_setting == 3 then
 				-- 3rd girder
