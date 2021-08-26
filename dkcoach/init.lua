@@ -16,7 +16,6 @@ exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
 function dkcoach.startplugin()
-	-- Plugin globals
 	local char_table = {}
 	char_table["0"] = 0x00
 	char_table["1"] = 0x01
@@ -62,21 +61,19 @@ function dkcoach.startplugin()
 	char_table["-"] = 0x35
 	char_table["!"] = 0x38
 	char_table["'"] = 0x3d
-	char_table["^"] = 0xfe
-	help_setting = 3
-	help_setting_name = {}
+	local help_setting_name = {}
 	help_setting_name[1] = " NO"
 	help_setting_name[2] = "MIN"
 	help_setting_name[3] = "MAX"
-	spring_default_start_x = 22
-	spring_default_start_y = 224
-	spring_coach_start_x = 180
-	spring_coach_start_y = 112
-	barrel_default_start_x = 63
-	barrel_default_start_y = 240
-	barrel_coach_start_x = 115
-	barrel_coach_start_y = 206
-
+	local help_setting = 3
+	local spring_startx_default = 22
+	local spring_starty_default = 224
+	local spring_startx_coach = 180
+	local spring_starty_coach = 112
+	local barrel_startx_default = 63
+	local barrel_starty_default = 240
+	local barrel_startx_coach = 115
+	local barrel_starty_coach = 206
 
 	function initialize()
 		last_help_toggle = os.clock()
@@ -131,18 +128,22 @@ function dkcoach.startplugin()
     function barrel_coach()
 		if help_setting > 1 then
 			-- Change Jumpman's start position to focus coaching on DK's Girder.
-			if mem:read_u8(0x694c) == barrel_default_start_x and mem:read_u8(0x694f) == barrel_default_start_y then
+			if mem:read_u8(0x694c) == barrel_startx_default and mem:read_u8(0x694f) == barrel_starty_default then
 				write_message(0x7619, "-START HERE")
-				change_jumpman_position(barrel_coach_start_x, barrel_coach_start_y)
+				change_jumpman_position(barrel_startx_coach, barrel_starty_coach)
 			else
-				if mem:read_u8(0x694f) < barrel_coach_start_y then
+				if mem:read_u8(0x694f) < barrel_starty_coach then
 					write_message(0x7619, "           ")
 				end
 			end		
 		
 			jm_x = mem:read_u8(0x6203)
 			jm_y = mem:read_u8(0x6205)
-			print(jm_x.."  "..jm_y)
+			-- convert Jumpman position to drawing system coordinates
+			dx = jm_x - 16
+			dy = 250 - jm_y
+			-- mark Jumpman's location with a spot (for debug)
+			-- version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
 
 			if help_setting == 3 then
 				-- 3rd girder
@@ -150,30 +151,35 @@ function dkcoach.startplugin()
 				draw_zone("safe", 95, 137, 76, 160)
 
 				-- 4th girder
-				draw_zone("mostlysafe", 130, 40, 111, 51)
-				draw_zone("mostlysafe", 131, 59, 110, 73)
-				draw_zone("hazard", 127, 80, 107, 130)
 				draw_zone("safe", 126, 130, 106, 150)
+				draw_zone("hazard", 127, 80, 107, 130)
+
+				draw_zone("mostlysafe", 131, 59, 110, 73)
+
+				draw_zone("mostlysafe", 130, 40, 111, 51)
 
 				-- 5th girder
 				draw_zone("safe", 162, 128, 142, 183)
 				draw_zone("safe", 163, 193, 147, 218)
 			end
 
-			if jm_x >= 137 and jm_x <=175 and jm_y <= 175 and jm_y >= 158 then
+			if dx >= 120 and dx <= 160 and dy <= 95 and dy >= 75 then
+				--version_draw_box(95,120, 75, 160, 0xffffffff, 0x0)
 				write_message(0x76f4, "STEER")
-			elseif jm_x >= 74 and jm_x <=89 and jm_y <= 139 and jm_y >= 120 then
-				write_message(0x772c, "---WAIT")
-				write_message(0x762c, "UNTIL CLEAR")
-				write_message(0x74ac, "---")
-				write_message(0x76d0, "STEER")
-				write_message(0x7550, "STEER")
-			elseif jm_x >= 93 and jm_x <= 140 and jm_y <= 145 and jm_y >= 128 then
+			elseif dx >= 80 and dx <= 150 and dy <= 127 and dy >= 106 then
+				--version_draw_box(127,80, 106, 150, 0xffffffff, 0x0)
 				write_message(0x772c, "WATCH")
 				write_message(0x772d, "KONG!")
-				--write_message(0x76d0, "STEER")
 				write_message(0x7550, "STEER")
-			elseif jm_x >= 45 and jm_x <=69 and jm_y <= 136 and jm_y >= 92 then
+			elseif dx >= 53 and dx <=73 and dy <= 131 and dy >= 110 then
+				--version_draw_box(131,73, 110, 52, 0xffffffff, 0x0)
+				write_message(0x772c, "   WAIT")
+				write_message(0x762c, "UNTIL CLEAR")
+				write_message(0x74ac, "   ")
+				write_message(0x76d0, "STEER")
+				write_message(0x7550, "STEER")
+			elseif dx >= 10 and dx <= 51 and dy <= 130 and dy >= 111 then
+				--version_draw_box(130,10, 111, 51, 0xffffffff, 0x0)
 				write_message(0x772c, "WATCH")
 				write_message(0x772d, "KONG!")
 				write_message(0x76d0, "STEER")
@@ -212,12 +218,12 @@ function dkcoach.startplugin()
 			end
 			
 			-- Change Jumpman's start position to focus coaching on DK's Girder.
-			if mem:read_u8(0x694c) == spring_default_start_x and mem:read_u8(0x694f) == spring_default_start_y then
+			if mem:read_u8(0x694c) == spring_startx_default and mem:read_u8(0x694f) == spring_starty_default then
 				write_message(0x75ed, "START ")
 				write_message(0x75ee, "HERE__")
-				change_jumpman_position(spring_coach_start_x, spring_coach_start_y)
+				change_jumpman_position(spring_startx_coach, spring_starty_coach)
 			else
-				if mem:read_u8(0x694f) < spring_coach_start_y then
+				if mem:read_u8(0x694f) < spring_starty_coach then
 					write_message(0x75ed, "      ")
 					write_message(0x75ee, "      ")
 				end
@@ -272,8 +278,8 @@ function dkcoach.startplugin()
 
 			-- Change Jumpman's position back to default if necessary.
 			if os.clock() - last_help_toggle < 0.05 then
-				if mem:read_u8(0x694c) == spring_coach_start_x and mem:read_u8(0x694f) == spring_coach_start_y then
-					change_jumpman_position(spring_default_start_x, spring_default_start_y)
+				if mem:read_u8(0x694c) == spring_startx_coach and mem:read_u8(0x694f) == spring_starty_coach then
+					change_jumpman_position(spring_startx_default, spring_starty_default)
 				end
 			end
 		end
