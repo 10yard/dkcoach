@@ -16,6 +16,22 @@ exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
 function dkcoach.startplugin()
+	local debug = false
+
+	local message_table = {}
+	-- Barrels stage
+	message_table["-START HERE"] = 0x7619
+	message_table["WATCH"] = 0x772c
+	message_table["KONG!"] = 0x772d
+	message_table["WAIT"] = 0x75cc
+	message_table["UNTIL CLEAR"] = 0x762d
+
+	-- Springs stage
+	message_table["START"] = 0x75ed
+	message_table["HERE__"] = 0x75ee
+	message_table["'LONG' "] = 0x77a6
+	message_table["'SHORT'"] = 0x77a6
+
 	local char_table = {}
 	char_table["0"] = 0x00
 	char_table["1"] = 0x01
@@ -95,11 +111,10 @@ function dkcoach.startplugin()
 
 	function main()
 		if mame_version >= 0.196 then
-			stage = mem:read_i8(0x6227)
-			mode2 = mem:read_u8(0xc600a)
+			stage, mode2 = mem:read_i8(0x6227), mem:read_u8(0xc600a)
 
 			-- overwrite the rom's highscore text with title and display the active help setting.
-			write_message(0x76e0, "    DK COACH   ".."TOGGLE")
+			write_message(0x76e0, "    DK COACH   TOGGLE")
 			write_message(0x7521, help_setting_name[help_setting].." HELP")
 
 			-- check for P2 button press.
@@ -126,94 +141,73 @@ function dkcoach.startplugin()
 	end
 
     function barrel_coach()
+		jm_x, jm_y = mem:read_u8(0x6203), mem:read_u8(0x6205)
+		-- convert Jumpman position to drawing system coordinates
+		dx, dy = jm_x - 16, 250 - jm_y
+
+		if debug == true then
+			-- mark Jumpman's location with a spot and output x, y to console
+			version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
+			print(dx.."  "..dy)
+		end
+
 		if help_setting > 1 then
+			-- Display safe zones
+			--2nd girder
+			draw_zone("mostlysafe", 62, 80, 43, 96)
+
+			-- 3rd girder
+			draw_zone("mostlysafe", 94, 120, 75, 142)
+			draw_zone("safe", 95, 142, 76, 162)
+
+			-- 4th girder
+			draw_zone("safe", 125, 130, 105, 150)
+			draw_zone("safe", 131, 63, 110, 74)
+			draw_zone("mostlysafe", 130, 40, 111, 51)
+
+			-- 5th girder
+			draw_zone("safe", 155, 10, 135, 30)
+			draw_zone("mostlysafe", 160, 96, 140, 118)
+			draw_zone("safe", 162, 192, 146, 208)
+		end
+
+		if help_setting == 3 then
 			-- Change Jumpman's start position to focus coaching on DK's Girder.
 			if mem:read_u8(0x694c) == barrel_startx_default and mem:read_u8(0x694f) == barrel_starty_default then
-				write_message(0x7619, "-START HERE")
+				write_from_table({"-START HERE"})
 				change_jumpman_position(barrel_startx_coach, barrel_starty_coach)
-			else
-				if mem:read_u8(0x694f) < barrel_starty_coach then
-					write_message(0x7619, "           ")
-				end
-			end		
-		
-			jm_x = mem:read_u8(0x6203)
-			jm_y = mem:read_u8(0x6205)
-			-- convert Jumpman position to drawing system coordinates
-			dx = jm_x - 16
-			dy = 250 - jm_y
-			-- mark Jumpman's location with a spot (for debug)
-			--print(dx.."  "..dy)
-			--version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
-
-			if help_setting == 3 then
-				-- 3rd girder
-				draw_zone("mostlysafe", 94, 120, 75, 137)
-				draw_zone("safe", 95, 137, 76, 160)
-
-				-- 4th girder
-				draw_zone("safe", 125, 130, 105, 150)
-				draw_zone("hazard", 127, 80, 107, 130)
-
-				draw_zone("mostlysafe", 131, 59, 110, 73)
-
-				draw_zone("mostlysafe", 130, 40, 111, 51)
-
-				-- 5th girder
-				draw_zone("safe", 162, 128, 142, 183)
-				draw_zone("safe", 163, 193, 147, 218)
+			elseif mem:read_u8(0x694f) ~= barrel_starty_coach then
+				clear_from_table({"-START HERE"})
 			end
 
-			if dx >= 120 and dx <= 160 and dy <= 95 and dy >= 75 then
-				--version_draw_box(95,120, 75, 160, 0xffffffff, 0x0)
-				write_message(0x7774, "STEER")
+			-- Display helpful messages
+			if dx >= 80 and dx <= 96 and dy <= 62 and dy >= 43 then
+				draw_zone("steer", 67, 96, 42, 104)
+			elseif dx >= 120 and dx <= 162 and dy <= 94 and dy >= 75 then
+				--version_draw_box(95,120, 75, 162, 0xffffffff, 0x0)
 				draw_zone("steer", 103, 64, 72, 72)
+				draw_zone("steer", 100, 112, 74, 120)
 			elseif dx >= 80 and dx <= 150 and dy <= 125 and dy >= 105 then
 				--version_draw_box(125,80, 105, 150, 0xffffffff, 0x0)
-				write_message(0x772c, "WATCH")
-				write_message(0x772d, "KONG!")
-				write_message(0x7610, "STEER")
+				write_from_table({"WATCH", "KONG!"})
 				draw_zone("steer", 136, 168, 104, 176)
-			elseif dx >= 53 and dx <=73 and dy <= 131 and dy >= 110 then
+			elseif dx >= 53 and dx <=74 and dy <= 131 and dy >= 110 then
 				--version_draw_box(131,73, 110, 52, 0xffffffff, 0x0)
-				write_message(0x762c, "   WAIT    ")
-				write_message(0x762d, "UNTIL CLEAR")
-				write_message(0x74ac, "   ")
-				write_message(0x7610, "STEER")
+				write_from_table({"WAIT", "UNTIL CLEAR"})
 				draw_zone("steer", 136, 168, 104, 176)
 				draw_zone("steer", 131, 72, 110, 80)
 			elseif dx >= 10 and dx <= 51 and dy <= 130 and dy >= 111 then
 				--version_draw_box(130,10, 111, 51, 0xffffffff, 0x0)
-				write_message(0x762c, "   WAIT    ")
-				write_message(0x762d, "UNTIL CLEAR")
-				write_message(0x772c, "WATCH")
-				write_message(0x772d, "KONG!")
-				write_message(0x7610, "STEER")
+				write_from_table({"WAIT", "UNTIL CLEAR", "WATCH", "KONG!"})
 				draw_zone("steer", 136, 168, 104, 176)
 				draw_zone("steer", 131, 72, 110, 80)
+			elseif dx >= 10 and dx <= 90 and dy <= 155 and dy >= 135 then
+				write_from_table({"WAIT", "UNTIL CLEAR"})
 			else
-				-- clear screen info
-				write_message(0x7774, "     ")
-				write_message(0x7610, "     ")
-				write_message(0x76f4, "      ")
-				write_message(0x762c, "       ")
-				write_message(0x762d, "           ")
-				write_message(0x74ac, "   ")
-				write_message(0x7650, "     ")
-				write_message(0x772c, "     ")
-				write_message(0x772d, "     ")
+				clear_from_table({"WATCH", "KONG!", "WAIT", "UNTIL CLEAR"})
 			end
 		else
-			-- Clear screen info
-			write_message(0x7774, "     ")
-			write_message(0x7610, "     ")
-			write_message(0x76f4, "      ")
-			write_message(0x762c, "       ")
-			write_message(0x762d, "           ")
-			write_message(0x74ac, "   ")
-			write_message(0x772c, "     ")
-			write_message(0x772d, "     ")		
-			write_message(0x7619, "           ")
+			clear_from_table({"WATCH", "KONG!", "WAIT", "UNTIL CLEAR", "-START HERE"})
 		end
 	end
 
@@ -221,19 +215,16 @@ function dkcoach.startplugin()
 		if help_setting > 1 then
 			-- Reset spring types at start of stage
 			if mode == 0xb then
-				s_type = nil
-				s_type_trailing = nil
+				s_type, s_type_trailing = nil, nil
 			end
 			
 			-- Change Jumpman's start position to focus coaching on DK's Girder.
 			if mem:read_u8(0x694c) == spring_startx_default and mem:read_u8(0x694f) == spring_starty_default then
-				write_message(0x75ed, "START ")
-				write_message(0x75ee, "HERE__")
+				write_from_table({"START", "HERE__"})
 				change_jumpman_position(spring_startx_coach, spring_starty_coach)
 			else
 				if mem:read_u8(0x694f) < spring_starty_coach then
-					write_message(0x75ed, "      ")
-					write_message(0x75ee, "      ")
+					clear_from_table({"START", "HERE__"})
 				end
 			end
 
@@ -245,8 +236,7 @@ function dkcoach.startplugin()
 
 			-- Determine the spring type (0-15) of generated springs
 			for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
-				local s_x = mem:read_u8(address + 3)
-				local s_y = mem:read_u8(address + 5)
+				local s_x, s_y = mem:read_u8(address + 3), mem:read_u8(address + 5)
 				if s_y == 80 then             -- y start position of new springs is always 80
 					if s_x >= 248 then        -- x start position is between 248 and 7
 						s_type = s_x - 248
@@ -263,11 +253,11 @@ function dkcoach.startplugin()
 			if s_type ~= nil then
 				-- Update screen with spring info
 				write_message(0x77a5, "T="..string.format("%02d", s_type))
-				write_message(0x77a6, "       ")
+				clear_from_table({"'LONG' ","'SHORT'"})
 				if s_type >= 13 then
-					write_message(0x77a6, "'LONG'")
+					write_from_table({"'LONG' "})
 				elseif s_type <= 5 then
-					write_message(0x77a6, "'SHORT'")
+					write_from_table({"'SHORT'"})
 				end
 				if help_setting == 3 then
 					--1st and 2nd bounce boxes use the latest spring type.
@@ -278,11 +268,8 @@ function dkcoach.startplugin()
 				end
 			end
 		else
-			-- Clear screen info
-			write_message(0x77a5, "    ")
-			write_message(0x77a6, "       ")
-			write_message(0x75ed, "      ")
-			write_message(0x75ee, "      ")
+			clear_from_table({"'LONG' ","'SHORT'"})
+			clear_from_table({"START", "HERE__"})
 
 			-- Change Jumpman's position back to default if necessary.
 			if os.clock() - last_help_toggle < 0.05 then
@@ -307,6 +294,29 @@ function dkcoach.startplugin()
 			mem:write_i8(start_address - ((key - 1) * 32), _char_table[string.sub(text, key, key)])
 		end
 	end	
+
+	function write_from_table(messages)
+		-- load messages from table and display on screen
+		local _message_table = message_table
+		for _, message in pairs(messages) do
+			address = _message_table[message]
+			if address ~= nil then
+				write_message(address, message)
+			end
+		end
+	end
+
+	function clear_from_table(messages)
+		-- load messages from table and clear from screen
+		local _message_table = message_table
+		for _, message in pairs(messages) do
+			address = _message_table[message]
+			if address ~= nil then
+				local _spaces = string.format("%"..string.len(message).."s","")
+				write_message(address, _spaces)
+			end
+		end
+	end
 
 	function version_draw_box(y1, x1, y2, x2, c1, c2)
 		-- This function handles the version specific syntax of draw_box
