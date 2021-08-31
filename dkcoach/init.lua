@@ -21,10 +21,9 @@ function dkcoach.startplugin()
 	local message_table = {}
 	-- Barrels stage
 	message_table["-START HERE"] = 0x7619
-	message_table["WATCH"] = 0x772c
-	message_table["KONG!"] = 0x772d
-	message_table["WAIT"] = 0x75cc
+	message_table["WAIT"] = 0x76cd
 	message_table["UNTIL CLEAR"] = 0x762d
+	message_table["WILD !!"] = 0x77a5
 
 	-- Springs stage
 	message_table["START"] = 0x75ed
@@ -141,20 +140,23 @@ function dkcoach.startplugin()
 	end
 
     function barrel_coach()
-		jm_x, jm_y = mem:read_u8(0x6203), mem:read_u8(0x6205)
+		jm_x, jm_y, jm_jump = mem:read_u8(0x6203), mem:read_u8(0x6205), mem:read_u8(0x6216)
 		-- convert Jumpman position to drawing system coordinates
-		dx, dy = jm_x - 16, 250 - jm_y
 
-		if debug == true then
+		if jm_jump == 0 or dx == nil or dy == nil then
+			dx, dy = jm_x - 16, 250 - jm_y
+		end
+
+		if debug then
 			-- mark Jumpman's location with a spot and output x, y to console
 			version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
 			print(dx.."  "..dy)
 		end
 
 		if help_setting > 1 then
-			-- Display safe zones
+			-- Display safe spots
 			--2nd girder
-			draw_zone("mostlysafe", 62, 80, 43, 96)
+			draw_zone("mostlysafe", 62, 74, 43, 96)
 
 			-- 3rd girder
 			draw_zone("mostlysafe", 94, 120, 75, 142)
@@ -162,7 +164,7 @@ function dkcoach.startplugin()
 
 			-- 4th girder
 			draw_zone("safe", 125, 130, 105, 150)
-			draw_zone("safe", 131, 63, 110, 74)
+			draw_zone("safe", 131, 64, 110, 74)
 			draw_zone("mostlysafe", 130, 40, 111, 51)
 
 			-- 5th girder
@@ -180,41 +182,58 @@ function dkcoach.startplugin()
 				clear_from_table({"-START HERE"})
 			end
 
-			-- Display helpful messages
-			if dx >= 80 and dx <= 96 and dy <= 62 and dy >= 43 then
-				draw_zone("steer", 67, 96, 42, 104)
+			-- Detect wild barrels
+			local wild = false
+			for _, address in pairs({0x6700, 0x6720, 0x6740, 0x6760, 0x6780, 0x67a0, 0x67c0, 0x67e0}) do
+				local b_status, b_crazy, b_y = mem:read_u8(address), mem:read_u8(address + 1), mem:read_u8(address + 5)
+				if b_status ~= 0 and b_crazy == 1 and b_y < 236 then
+					wild = true
+				end
+			end
+
+			-- Issue wild barrel warning
+			if wild then
+				local _dx, _dy = jm_x - 16, 250 - jm_y
+				draw_zone("hazard", _dy - 6, _dx - 10, _dy + 16, _dx + 10)
+				if flash then
+					write_from_table({"WILD !!"})
+				end
+			else
+				clear_from_table({"WILD !!"})
+			end
+
+			-- Display steering guides
+			if dx >= 62 and dx <= 96 and dy <= 62 and dy >= 43 then
+				draw_zone("ladder", 67, 96, 42, 104)
 			elseif dx >= 120 and dx <= 162 and dy <= 94 and dy >= 75 then
-				--version_draw_box(95,120, 75, 162, 0xffffffff, 0x0)
-				draw_zone("steer", 103, 64, 72, 72)
-				draw_zone("steer", 100, 112, 74, 120)
+				draw_zone("ladder", 103, 64, 72, 72)
+				draw_zone("ladder", 100, 112, 74, 120)
 			elseif dx >= 80 and dx <= 150 and dy <= 125 and dy >= 105 then
-				--version_draw_box(125,80, 105, 150, 0xffffffff, 0x0)
-				write_from_table({"WATCH", "KONG!"})
-				draw_zone("steer", 136, 168, 104, 176)
-			elseif dx >= 53 and dx <=74 and dy <= 131 and dy >= 110 then
-				--version_draw_box(131,73, 110, 52, 0xffffffff, 0x0)
-				write_from_table({"WAIT", "UNTIL CLEAR"})
-				draw_zone("steer", 136, 168, 104, 176)
-				draw_zone("steer", 131, 72, 110, 80)
-			elseif dx >= 10 and dx <= 51 and dy <= 130 and dy >= 111 then
-				--version_draw_box(130,10, 111, 51, 0xffffffff, 0x0)
-				write_from_table({"WAIT", "UNTIL CLEAR", "WATCH", "KONG!"})
-				draw_zone("steer", 136, 168, 104, 176)
-				draw_zone("steer", 131, 72, 110, 80)
-			elseif dx >= 10 and dx <= 90 and dy <= 155 and dy >= 135 then
+				draw_zone("ladder", 136, 168, 104, 176)
+			elseif dx >= 10 and dx <= 74 and dy <= 131 and dy >= 111 then
+				draw_zone("ladder", 136, 168, 104, 176)
+				draw_zone("ladder", 131, 72, 110, 80)
+			elseif dx >= 96 and dx <= 184 and dy <= 160 and dy >= 140 then
+				draw_zone("ladder", 164, 88, 139, 96)
+			elseif dx >= 192 and dx <= 208 and dy <= 162 and dy >= 146 then
+				draw_zone("ladder", 164, 88, 139, 96)
+				draw_zone("ladder", 161, 184, 145, 192)
+			end
+
+			if dy <= 139 and dy >= 109 then
 				write_from_table({"WAIT", "UNTIL CLEAR"})
 			else
-				clear_from_table({"WATCH", "KONG!", "WAIT", "UNTIL CLEAR"})
+				clear_from_table({"WAIT", "UNTIL CLEAR"})
 			end
 		else
-			clear_from_table({"WATCH", "KONG!", "WAIT", "UNTIL CLEAR", "-START HERE"})
+			clear_from_table({"WAIT", "UNTIL CLEAR", "-START HERE", "WILD !!"})
 		end
 	end
 
 	function spring_coach()
 		if help_setting > 1 then
 			-- Reset spring types at start of stage
-			if mode == 0xb then
+			if mode2 == 0xb then
 				s_type, s_type_trailing = nil, nil
 			end
 			
@@ -319,7 +338,7 @@ function dkcoach.startplugin()
 	end
 
 	function version_draw_box(y1, x1, y2, x2, c1, c2)
-		-- This function handles the version specific syntax of draw_box
+		-- Handle the version specific syntax of draw_box
 		if mame_version >= 0.227 then
 			scr:draw_box(y1, x1, y2, x2, c1, c2)
 		else
@@ -338,14 +357,18 @@ function dkcoach.startplugin()
 		elseif type == "mostlysafe" then
 			version_draw_box(y1, x1, y2, x2, 0xffffd800, 0x00000000)
 			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x60ffd800)
-		elseif type == "steer" then
-			if math.fmod(mem:read_u8(0xc601a), 32) <= 16 then
-				version_draw_box(y1, x1, y2 , x2, 0x0, 0xbb0000ff)
-			end
+		elseif type == "ladder" and flash() then
+			version_draw_box(y1, x1, y2 , x2, 0x0, 0xbb0000ff)
 		end
 	end
 
+	function flash()
+		-- flash in time with 1UP
+		return math.fmod(mem:read_u8(0xc601a), 32) <= 16
+	end
+
 	function int_to_bin(x)
+		-- convert integer to binary
 		local ret = ""
 		while x~=1 and x~=0 do
 			ret = tostring(x%2) .. ret
