@@ -5,7 +5,23 @@
 Tested with latest MAME version 0.234
 (Compatible with MAME and WolfMAME versions from 0.196 upwards)
 
-At the moment,  the plugin only helps you with the springs stage.  I plan to add help to other stages.
+At the moment,  the plugin helps you with the springs and barrels stages.  I plan to add help to all other stages.
+
+
+## The Barrels Stage
+
+The helper visualises safe zones in green - where Jumpman is safe from wild barrels.  Warnings appear when DK releases a wild barrel.  Other helpers provide you with real time information.
+
+  - 4 fixed safe zones appear in green on the board
+  - 4 "mostly" safe zones appear in amber on the board.  These zones are in uphill positions adjacent to a ladder.
+  - Ladders are highlighted when steering is recommended - to divert barrels away from your current position.
+  - An alert appears when DK releases a wild barrel.  Jumpman is also targetted with a crosshair to draw your immediate attention.
+  - The barrel control probability is displayed (as a percentage)
+  - A visible hammer countdown timer appears
+  - Jumpman is repositioned on the 2nd girder as a starting point as it is easily reached.  Your coaching is focussed on the difficult girders.
+
+
+![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot2.png)
 
 
 ## The Springs/Elevators Stage
@@ -19,13 +35,11 @@ The helper visualises the safe zones and danger zones on DK's girder.  Informati
  - An alert appears for short (0-5) and long (12-15) springs.  Helping you to identify these springs so you can react quickly.
  - Jumpman is repositioned at the top of the screen ready to climb the ladder up to DK's girder.  This ensures your coaching is focussed on the most difficult part of the stage.
 
-Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min Help) and 0 (No Help)
-
 
 ![Screenshot](https://github.com/10yard/dkcoach/blob/master/screenshot.png)
 
 
-#### Tips for completing the Springs stage, level 4+
+### Tips for completing the Springs stage, level 4+
 
  - Navigate Jumpman to the first green safe spot on the far right of DK's girder.
  - Move to the left edge of the safe spot, ensuring that Jumpman's feet remain inside the box.
@@ -39,7 +53,9 @@ Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min He
 
 ## Help Settings
 
-The default setting is "Max Help".  Toggle the setting by pressing "P2 Start".
+Use "P2 Start" to toggle the helpfulness setting between 2 (Max Help), 1 (Min Help) and 0 (No Help)
+
+The default setting is "Max Help".
   - Max Help: All of the available helpers are displayed.
   - Min Help: Only basic helpers are displayed
   - No Help: No help is displayed.

@@ -9,21 +9,21 @@
 
 local exports = {}
 exports.name = "dkcoach"
-exports.version = "0.1"
+exports.version = "0.2"
 exports.description = "Donkey Kong Coach"
 exports.license = "GNU GPLv3"
 exports.author = { name = "Jon Wilson (10yard)" }
 local dkcoach = exports
 
 function dkcoach.startplugin()
-	local debug = false
+	local barrel_data = {0x6700, 0x6720, 0x6740, 0x6760, 0x6780, 0x67a0, 0x67c0, 0x67e0}
+	local spring_data = {0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}
 
 	local message_table = {}
 	-- Barrels stage
 	message_table["-START HERE"] = 0x7619
-	message_table["WAIT"] = 0x76cd
-	message_table["UNTIL CLEAR"] = 0x762d
-	message_table["WILD !!"] = 0x77a5
+	message_table["% WILD %"] = 0x77a5
+	message_table["%      %"] = 0x77a5
 
 	-- Springs stage
 	message_table["START"] = 0x75ed
@@ -76,6 +76,9 @@ function dkcoach.startplugin()
 	char_table["-"] = 0x35
 	char_table["!"] = 0x38
 	char_table["'"] = 0x3d
+	char_table["p"] = 0xdf
+	char_table["%"] = 0xfe
+
 	local help_setting_name = {}
 	help_setting_name[1] = " NO"
 	help_setting_name[2] = "MIN"
@@ -127,9 +130,21 @@ function dkcoach.startplugin()
 					last_help_toggle = os.clock()
 				end
 			end
-			
-			-- stage specific action during gamplay			
-			if mode2 == 0xc then
+
+			if mode2 == 0xc or mode2 == 0xd or mode2 == 0x16 then
+				-- get Jumpman's position and convert to drawing system coordinates (ignoring jump)
+				jm_x = mem:read_u8(0x6203)
+				jm_y = mem:read_u8(0x6205)
+				if mem:read_u8(0x6216) == 0 or ds_x == nil or ds_y == nil then
+					ds_x = jm_x - 16
+					ds_y = 250 - jm_y
+				end
+
+				-- Mark Jumpman's location with a spot and output x, y position to console
+				-- version_draw_box(ds_y - 1, ds_x - 1, ds_y + 1, ds_x + 1, 0xffffffff, 0xffffffff)
+				-- print(ds_x.."  "..ds_y)
+
+				-- stage specific action during gamplay
 				if stage == 1 then
 					barrel_coach()
 				elseif stage == 3 then
@@ -140,98 +155,140 @@ function dkcoach.startplugin()
 	end
 
     function barrel_coach()
-		jm_x, jm_y, jm_jump = mem:read_u8(0x6203), mem:read_u8(0x6205), mem:read_u8(0x6216)
-		-- convert Jumpman position to drawing system coordinates
+		local wild = false
 
-		if jm_jump == 0 or dx == nil or dy == nil then
-			dx, dy = jm_x - 16, 250 - jm_y
-		end
-
-		if debug then
-			-- mark Jumpman's location with a spot and output x, y to console
-			version_draw_box(dy - 1, dx - 1, dy + 1, dx + 1, 0xffffffff, 0xffffffff)
-			print(dx.."  "..dy)
-		end
-
-		if help_setting > 1 then
+		if help_setting > 1 and mode2 == 0xc then
 			-- Display safe spots
-			--2nd girder
-			draw_zone("mostlysafe", 62, 74, 43, 96)
-
 			-- 3rd girder
-			draw_zone("mostlysafe", 94, 120, 75, 142)
 			draw_zone("safe", 95, 142, 76, 162)
 
 			-- 4th girder
 			draw_zone("safe", 125, 130, 105, 150)
 			draw_zone("safe", 131, 64, 110, 74)
-			draw_zone("mostlysafe", 130, 40, 111, 51)
 
 			-- 5th girder
 			draw_zone("safe", 155, 10, 135, 30)
-			draw_zone("mostlysafe", 160, 96, 140, 118)
-			draw_zone("safe", 162, 192, 146, 208)
-		end
 
-		if help_setting == 3 then
-			-- Change Jumpman's start position to focus coaching on DK's Girder.
-			if mem:read_u8(0x694c) == barrel_startx_default and mem:read_u8(0x694f) == barrel_starty_default then
-				write_from_table({"-START HERE"})
-				change_jumpman_position(barrel_startx_coach, barrel_starty_coach)
-			elseif mem:read_u8(0x694f) ~= barrel_starty_coach then
-				clear_from_table({"-START HERE"})
+			-- Display barrel steering probability as a percentage
+			internal_difficulty = mem:read_u8(0x6380)
+			if internal_difficulty >= 4 then
+				steering = "75p"
+			elseif internal_difficulty >= 2 then
+				steering = "50p"
+			else
+				steering = "25p"
 			end
+			write_message(0x7784, "BC="..steering)
+			version_draw_box(217,52, 224, 55, 0xff000000, 0xff000000)
+			version_draw_box(217,48, 224, 49, 0xff000000, 0xff000000)
 
 			-- Detect wild barrels
-			local wild = false
-			for _, address in pairs({0x6700, 0x6720, 0x6740, 0x6760, 0x6780, 0x67a0, 0x67c0, 0x67e0}) do
+			for _, address in pairs(barrel_data) do
 				local b_status, b_crazy, b_y = mem:read_u8(address), mem:read_u8(address + 1), mem:read_u8(address + 5)
-				if b_status ~= 0 and b_crazy == 1 and b_y < 236 then
+				if b_status ~= 0 and b_crazy == 1 and b_y <= jm_y + 16 then
 					wild = true
 				end
 			end
 
 			-- Issue wild barrel warning
 			if wild then
-				local _dx, _dy = jm_x - 16, 250 - jm_y
-				draw_zone("hazard", _dy - 6, _dx - 10, _dy + 16, _dx + 10)
-				if flash then
-					write_from_table({"WILD !!"})
+				if flash() then
+					write_from_table({"% WILD %"})
+				else
+					write_from_table({"%      %"})
 				end
 			else
-				clear_from_table({"WILD !!"})
+				clear_from_table({"% WILD %"})
 			end
 
-			-- Display steering guides
-			if dx >= 62 and dx <= 96 and dy <= 62 and dy >= 43 then
-				draw_zone("ladder", 67, 96, 42, 104)
-			elseif dx >= 120 and dx <= 162 and dy <= 94 and dy >= 75 then
-				draw_zone("ladder", 103, 64, 72, 72)
-				draw_zone("ladder", 100, 112, 74, 120)
-			elseif dx >= 80 and dx <= 150 and dy <= 125 and dy >= 105 then
-				draw_zone("ladder", 136, 168, 104, 176)
-			elseif dx >= 10 and dx <= 74 and dy <= 131 and dy >= 111 then
-				draw_zone("ladder", 136, 168, 104, 176)
-				draw_zone("ladder", 131, 72, 110, 80)
-			elseif dx >= 96 and dx <= 184 and dy <= 160 and dy >= 140 then
-				draw_zone("ladder", 164, 88, 139, 96)
-			elseif dx >= 192 and dx <= 208 and dy <= 162 and dy >= 146 then
-				draw_zone("ladder", 164, 88, 139, 96)
-				draw_zone("ladder", 161, 184, 145, 192)
+			-- display hammer timer
+			if mem:read_u8(0x6217) > 0 or mem:read_u8(0x6218) > 0 then
+				hammer_duration = (mem:read_u8(0x6394) + (256 * mem:read_u8(0x6395))) / 2
+				if hammer_duration >= 200 then
+					col = 0xffff0000
+				elseif hammer_duration >= 160 then
+					col = 0xffffd800
+				else
+					col = 0xff00ff00
+				end
+				version_draw_box(0,0, 256 - hammer_duration, 4, col, col)
+				version_draw_box(0,220, 256 - hammer_duration, 224, col, col)
 			end
 
-			if dy <= 139 and dy >= 109 then
-				write_from_table({"WAIT", "UNTIL CLEAR"})
-			else
-				clear_from_table({"WAIT", "UNTIL CLEAR"})
+
+			if help_setting == 3 then
+				-- Display mostly safe spots
+				--2nd girder
+				draw_zone("mostlysafe", 62, 74, 43, 96)
+
+				-- 3rd girder
+				draw_zone("mostlysafe", 94, 120, 75, 142)
+
+				-- 4th girder
+				draw_zone("mostlysafe", 132, 11, 113, 34)
+
+				-- 5th girder
+				draw_zone("mostlysafe", 160, 96, 140, 118)
+
+				-- Change Jumpman's start position to focus coaching on DK's Girder.
+				if mem:read_u8(0x694c) == barrel_startx_default and mem:read_u8(0x694f) == barrel_starty_default then
+					write_from_table({"-START HERE"})
+					change_jumpman_position(barrel_startx_coach, barrel_starty_coach)
+				elseif mem:read_u8(0x694f) ~= barrel_starty_coach then
+					clear_from_table({"-START HERE"})
+				end
+
+				-- Show wild barrel crosshair warning
+				if wild then
+					_ds_x = jm_x - 16
+					_ds_y = 250 - jm_y
+					draw_zone("crosshair", _ds_y, _ds_x, _ds_y, _ds_x)
+				end
+
+				-- Display steering guides
+				if ds_x >= 62 and ds_x <= 96 and ds_y <= 62 and ds_y >= 43 then
+					--2nd girder
+					draw_zone("ladder", 67, 96, 42, 104)
+				elseif ds_x >= 72 and ds_x <= 162 and ds_y <= 94 and ds_y >= 75 then
+					--3rd girder
+					draw_zone("ladder", 103, 64, 72, 72)
+					if ds_x >= 120 then
+						draw_zone("ladder", 100, 112, 74, 120)
+					end
+				elseif ds_x >= 80 and ds_x <= 150 and ds_y <= 125 and ds_y >= 105 then
+					--4th girder (right)
+					draw_zone("ladder", 136, 168, 104, 176)
+				elseif ds_x <= 74 and ds_y <= 131 and ds_y >= 111 then
+					--4th girder (left)
+					draw_zone("ladder", 136, 168, 104, 176)
+					draw_zone("ladder", 131, 72, 110, 80)
+					if ds_x <= 32 then
+						draw_zone("ladder", 128, 32, 112, 40)
+					end
+				elseif ds_x >= 96 and ds_x <= 184 and ds_y <= 160 and ds_y >= 140 then
+					--5th girder (left)
+					draw_zone("ladder", 164, 88, 139, 96)
+				elseif ds_x >= 192 and ds_x <= 208 and ds_y <= 162 and ds_y >= 146 then
+					--5th girder (right)
+					draw_zone("ladder", 164, 88, 139, 96)
+					draw_zone("ladder", 161, 184, 145, 192)
+				end
 			end
-		else
-			clear_from_table({"WAIT", "UNTIL CLEAR", "-START HERE", "WILD !!"})
+		end
+		if help_setting <= 2 then
+			clear_from_table({"-START HERE"})
+			write_message(0x7784, "      ")
+			-- Change Jumpman's position back to default if necessary.
+			if os.clock() - last_help_toggle < 0.05 then
+				if mem:read_u8(0x694c) == barrel_startx_coach and mem:read_u8(0x694f) == barrel_starty_coach then
+					change_jumpman_position(barrel_startx_default, barrel_starty_default)
+				end
+			end
 		end
 	end
 
 	function spring_coach()
-		if help_setting > 1 then
+		if help_setting > 1 and mode2 == 0xc then
 			-- Reset spring types at start of stage
 			if mode2 == 0xb then
 				s_type, s_type_trailing = nil, nil
@@ -254,7 +311,7 @@ function dkcoach.startplugin()
 			end
 
 			-- Determine the spring type (0-15) of generated springs
-			for _, address in pairs({0x6500, 0x6510, 0x6520, 0x6530, 0x6540, 0x6550}) do
+			for _, address in pairs(spring_data) do
 				local s_x, s_y = mem:read_u8(address + 3), mem:read_u8(address + 5)
 				if s_y == 80 then             -- y start position of new springs is always 80
 					if s_x >= 248 then        -- x start position is between 248 and 7
@@ -287,9 +344,9 @@ function dkcoach.startplugin()
 				end
 			end
 		else
+			write_message(0x77a5, "      ")
 			clear_from_table({"'LONG' ","'SHORT'"})
 			clear_from_table({"START", "HERE__"})
-
 			-- Change Jumpman's position back to default if necessary.
 			if os.clock() - last_help_toggle < 0.05 then
 				if mem:read_u8(0x694c) == spring_startx_coach and mem:read_u8(0x694f) == spring_starty_coach then
@@ -318,7 +375,7 @@ function dkcoach.startplugin()
 		-- load messages from table and display on screen
 		local _message_table = message_table
 		for _, message in pairs(messages) do
-			address = _message_table[message]
+			local address = _message_table[message]
 			if address ~= nil then
 				write_message(address, message)
 			end
@@ -329,7 +386,7 @@ function dkcoach.startplugin()
 		-- load messages from table and clear from screen
 		local _message_table = message_table
 		for _, message in pairs(messages) do
-			address = _message_table[message]
+			local address = _message_table[message]
 			if address ~= nil then
 				local _spaces = string.format("%"..string.len(message).."s","")
 				write_message(address, _spaces)
@@ -347,18 +404,29 @@ function dkcoach.startplugin()
 	end
 
 	function draw_zone(type, y1, x1, y2, x2)
-		if type == "hazard" then
-			version_draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
-			scr:draw_line(y1, x1, y2, x2, 0xffff0000)
-			scr:draw_line(y2, x1, y1, x2, 0xffff0000)
-		elseif type == "safe" then
-			version_draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
-			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x6000ff00)
-		elseif type == "mostlysafe" then
-			version_draw_box(y1, x1, y2, x2, 0xffffd800, 0x00000000)
-			version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x60ffd800)
-		elseif type == "ladder" and flash() then
-			version_draw_box(y1, x1, y2 , x2, 0x0, 0xbb0000ff)
+		if type == "crosshair" then
+			for i = -9, 8 do
+				version_draw_box(y1 + 6 + i, x1 + i, y1 + 6 + i + 1, x1 + i + 1,0xccff0000, 0xccff0000)
+				version_draw_box(y1 + 6 + i, x1 - i, y1 + 6 + i + 1, x1 - i + 1,0xccff0000, 0xccff0000)
+			end
+		elseif y1 > ds_y or y2 > ds_y then
+			if type == "hazard" then
+				version_draw_box(y1, x1, y2, x2, 0xffff0000, 0x66ff0000)
+				scr:draw_line(y1, x1, y2, x2, 0xffff0000)
+				scr:draw_line(y2, x1, y1, x2, 0xffff0000)
+			elseif type == "safe" then
+				version_draw_box(y1, x1, y2, x2, 0xff00ff00, 0x00000000)
+				version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x6000ff00)
+			elseif type == "mostlysafe" then
+				version_draw_box(y1, x1, y2, x2, 0xffffd800, 0x00000000)
+				version_draw_box(y1, x1, y2 + 3, x2, 0x00000000, 0x60ffd800)
+			elseif type == "ladder" then
+				if flash() then
+					version_draw_box(y1, x1, y2 , x2, 0x0, 0x990000ff)
+				else
+					version_draw_box(y1, x1, y2 , x2, 0x0, 0x330000ff)
+				end
+			end
 		end
 	end
 
