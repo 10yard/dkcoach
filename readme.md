@@ -74,11 +74,7 @@ The Plugin is run by adding `-plugin dkcoach` to your MAME arguments e.g.
 
 ## What's next?
 
-Addition of barrel stage helper
- - safe zones from wild barrels
- - wild barrel alert 
- - probability of steering barrels down ladders % 
- - hammer timer countdown
+Addition of rivets stage helper
  
 
 ## Thanks to

@@ -185,7 +185,7 @@ function dkcoach.startplugin()
 			-- Detect wild barrels
 			for _, address in pairs(barrel_data) do
 				local b_status, b_crazy, b_y = mem:read_u8(address), mem:read_u8(address + 1), mem:read_u8(address + 5)
-				if b_status ~= 0 and b_crazy == 1 and b_y <= jm_y + 16 then
+				if b_status ~= 0 and b_crazy == 1 and b_y <= jm_y then
 					wild = true
 				end
 			end
@@ -274,8 +274,11 @@ function dkcoach.startplugin()
 					draw_zone("ladder", 161, 184, 145, 192)
 				end
 			end
+		else
+			clear_from_table({"% WILD %"})
+			clear_from_table({"-START HERE"})
 		end
-		if help_setting <= 2 then
+		if help_setting <= 2 or mode2 ~= 0xc then
 			clear_from_table({"-START HERE"})
 			write_message(0x7784, "      ")
 			-- Change Jumpman's position back to default if necessary.
