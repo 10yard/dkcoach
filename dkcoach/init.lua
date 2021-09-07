@@ -1,6 +1,6 @@
 -- DK Coach by Jon Wilson (10yard)
 --
--- Tested with latest MAME versions 0.234 and 0.196
+-- Tested with latest MAME versions 0.235 and 0.196
 -- Compatible with MAME versions from 0.196
 -- Use P2 to toggle the helpfulness setting between 3 (Max), 2 (Min) and 1 (None)
 --
@@ -9,7 +9,7 @@
 
 local exports = {}
 exports.name = "dkcoach"
-exports.version = "0.2"
+exports.version = "0.21"
 exports.description = "Donkey Kong Coach"
 exports.license = "GNU GPLv3"
 exports.author = { name = "Jon Wilson (10yard)" }
@@ -96,13 +96,22 @@ function dkcoach.startplugin()
 	function initialize()
 		last_help_toggle = os.clock()
 		mame_version = tonumber(emu.app_version())
+		
+		data_credits = os.getenv("DATA_CREDITS")
+		data_autostart = os.getenv("DATA_AUTOSTART")
+		data_allow_skip_intro = os.getenv("DATA_ALLOW_SKIP_INTRO")
+		
 		if mame_version >= 0.227 then
 			cpu = manager.machine.devices[":maincpu"]
 			scr = manager.machine.screens[":screen"]
+			video = manager.machine.video
+			ports = manager.machine.ioport.ports
 			mem = cpu.spaces["program"]
 		elseif mame_version >= 0.196 then
 			cpu = manager:machine().devices[":maincpu"]
 			scr = manager:machine().screens[":screen"]
+			video = manager:machine():video()
+			ports = manager:machine():ioport().ports			
 			mem = cpu.spaces["program"]
 		else
 			print("----------------------------------------------------------")
@@ -112,9 +121,11 @@ function dkcoach.startplugin()
 	end
 
 	function main()
-		if mame_version >= 0.196 then
-			stage, mode2 = mem:read_i8(0x6227), mem:read_u8(0xc600a)
+		if cpu ~= nil then
+			stage, mode1, mode2 = mem:read_i8(0x6227), mem:read_u8(0xc6005), mem:read_u8(0xc600a)
 
+			dkafe_specific_features()
+			
 			-- overwrite the rom's highscore text with title and display the active help setting.
 			write_message(0x76e0, "    DK COACH   TOGGLE")
 			write_message(0x7521, help_setting_name[help_setting].." HELP")
@@ -167,7 +178,7 @@ function dkcoach.startplugin()
 			draw_zone("safe", 131, 64, 110, 74)
 
 			-- 5th girder
-			draw_zone("safe", 155, 10, 135, 30)
+			draw_zone("safe", 155, 11, 135, 28)
 
 			-- Display barrel steering probability as a percentage
 			internal_difficulty = mem:read_u8(0x6380)
@@ -255,7 +266,7 @@ function dkcoach.startplugin()
 					if ds_x >= 120 then
 						draw_zone("ladder", 100, 112, 74, 120)
 					end
-				elseif ds_x >= 80 and ds_x <= 150 and ds_y <= 125 and ds_y >= 105 then
+				elseif ds_x >= 80 and ds_x <= 168 and ds_y <= 125 and ds_y >= 105 then
 					--4th girder (right)
 					draw_zone("ladder", 136, 168, 104, 176)
 				elseif ds_x <= 74 and ds_y <= 131 and ds_y >= 111 then
@@ -448,6 +459,47 @@ function dkcoach.startplugin()
 		ret = tostring(x)..ret
 		return string.format("%08d", ret)
     end
+
+	function max_frameskip(switch)
+		if switch == 1 then
+			video.throttled = false
+			video.throttle_rate = 1000
+			video.frameskip = 8
+		else
+			video.throttled = true
+			video.throttle_rate = 1
+			video.frameskip = 0
+		end
+	end
+
+	function dkafe_specific_features()
+		-- Optionally set number of coins inserted into the machine
+		if data_credits ~= nil then
+			if tonumber(data_credits) > 0 and tonumber(data_credits) < 90 then
+				mem:write_i8(0x6001, data_credits)
+			end
+			data_credits = "0"
+		end
+
+		-- Optionally start the game by pressing P1 start.
+		if data_autostart == "1" then
+			ports[":IN2"].fields["1 Player Start"]:set_value(1)
+			data_autostart = "0"
+		end
+		
+		-- Optioanlly fast skip through the DK climb scene when jump button is pressed
+		if data_allow_skip_intro == "1" then
+			if mode1 == 3 then
+				if mode2 == 7 then
+					if string.sub(int_to_bin(mem:read_i8(0xc7c00)), 4, 4) == "1" then
+						max_frameskip(1)
+					end
+				else
+					max_frameskip(0)
+				end
+			end
+		end
+	end
 
 	emu.register_start(function()
 		initialize()
