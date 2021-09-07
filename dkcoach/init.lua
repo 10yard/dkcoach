@@ -84,6 +84,7 @@ function dkcoach.startplugin()
 	help_setting_name[2] = "MIN"
 	help_setting_name[3] = "MAX"
 	local help_setting = 3
+	local last_help_toggle = 0
 	local spring_startx_default = 22
 	local spring_starty_default = 224
 	local spring_startx_coach = 180
